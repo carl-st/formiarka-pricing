@@ -1,0 +1,45 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response contains Hello World", function() {
+    expect(res.getBody()).to.contain("Hello World");
+  });
+
+  test("Response time is less than 1000ms", function() {
+    expect(res.getResponseTime()).to.be.below(1000);
+  });
+}
+
+docs {
+  # Health Check Endpoint
+
+  This endpoint checks if the Formiarka Pricing service is running and responsive.
+
+  ## Expected Response
+  - Status: 200 OK
+  - Body: "Hello World!"
+
+  ## Use Case
+  - Service health monitoring
+  - Load balancer health checks
+  - CI/CD pipeline verification
+}
