@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: print_pricer_backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/usr/src/app/uploads
+      - ./gcodes:/usr/src/app/gcodes
+      # This volume is for the default OrcaSlicer profile
+      - ./orcaslicer_config:/root/.config/OrcaSlicer
+    environment:
+      - NODE_ENV=development

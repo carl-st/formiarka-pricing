@@ -1,0 +1,15 @@
+meta {
+  name: Calculate Print Price
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:3000/print/calculate
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(/test/cube.stl)
+}
