@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  pricing:
+    build: .
+    container_name: print-pricing
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - CURRENCY=PLN
+      - FILAMENT_COST_PER_KG=90
+      - ENERGY_COST_PER_KWH=1.2
+      - PRINTER_POWER_W=120
+      - HOURLY_RATE=20
+      - MAINTENANCE_RATE_PER_HOUR=5
+      - MARKUP_PCT=10
+      - MIN_JOB_FEE=15
+      # - PRUSA_CONFIG_BUNDLE=/configs/bundle.ini
+      - TMP_DIR=/tmp
+    volumes:
+      - tmpdata:/tmp
+      # - ./configs:/configs:ro  # if using custom profiles
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+volumes:
+  tmpdata:

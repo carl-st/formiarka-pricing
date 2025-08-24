@@ -1,0 +1,23 @@
+meta {
+  name: Upload
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:3000/pricing/stl
+  body: multipartForm
+  auth: inherit
+}
+
+headers {
+  Content-Type: multipart/form-data
+}
+
+body:multipart-form {
+  file: @file()
+}
+
+settings {
+  encodeUrl: false
+}
