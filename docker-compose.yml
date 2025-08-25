@@ -15,11 +15,11 @@ services:
       - MAINTENANCE_RATE_PER_HOUR=5
       - MARKUP_PCT=10
       - MIN_JOB_FEE=15
-      # - PRUSA_CONFIG_BUNDLE=/configs/bundle.ini
+      - PRUSA_CONFIG_BUNDLE=/configs/bundle.ini
       - TMP_DIR=/tmp
     volumes:
       - tmpdata:/tmp
-      # - ./configs:/configs:ro  # if using custom profiles
+      - ./configs:/configs:ro # if using custom profiles
     deploy:
       resources:
         limits:

@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY tsconfig.json ./
+COPY configs ./configs
 COPY src ./src
 RUN npm run build
 
@@ -14,6 +15,11 @@ FROM node:20-slim
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl libglu1-mesa libglib2.0-0 libsm6 libxrender1 libxext6 libx11-6 libxkbcommon0 \
+    mesa-utils libegl1-mesa libgl1-mesa-glx libgl1-mesa-dri xvfb \
+    libgtk-3-0 libgdk-pixbuf2.0-0 libcairo-gobject2 libpango-1.0-0 libatk1.0-0 \
+    libcairo2 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libpango-1.0-0 \
+    libharfbuzz0b libfontconfig1 libfreetype6 libx11-xcb1 libxcb1 libxcursor1 \
+    libxi6 libxrandr2 libxss1 libxcomposite1 libxdamage1 libxfixes3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PrusaSlicer via AppImage (headless)
@@ -26,6 +32,11 @@ RUN curl -L -o PrusaSlicer.AppImage https://github.com/prusa3d/PrusaSlicer/relea
     && chmod +x PrusaSlicer.AppImage \
     && ./PrusaSlicer.AppImage --appimage-extract \
     && ln -s /opt/squashfs-root/usr/bin/prusa-slicer /usr/local/bin/prusa-slicer
+
+# Set environment variables for headless OpenGL
+ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV GALLIUM_DRIVER=llvmpipe
+ENV DISPLAY=:99
 
 # App setup
 WORKDIR /app
@@ -42,4 +53,8 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD node -e "require('http').get('http://localhost:'+ (process.env.PORT||3000) +'/pricing/health',()=>process.exit(0)).on('error',()=>process.exit(1))" || exit 1
 
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+
+# Create a script to start Xvfb and the Node.js app
+RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1024x768x24 &\nexec "$@"' > /start.sh && chmod +x /start.sh
+
+CMD ["/start.sh", "node", "dist/main.js"]
