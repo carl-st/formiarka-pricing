@@ -1,0 +1,10 @@
+{
+  "currency": "PLN",
+  "material_cost_per_kg": 90,
+  "density_g_per_m": 2.85,
+  "energy_cost_per_kwh": 1.2,
+  "printer_power_w": 120,
+  "machine_cost_per_hour": 8,
+  "labor_cost_per_job": 5,
+  "overhead_pct": 15
+}

@@ -1,11 +1,11 @@
+// src/pricing/pricing.module.ts
 import { Module } from "@nestjs/common";
 import { PricingController } from "./pricing.controller";
 import { PricingService } from "./pricing.service";
-import { ConfigModule } from "../config/config.module";
+import { CuraService } from "./cura.service";
 
 @Module({
-  imports: [ConfigModule],
   controllers: [PricingController],
-  providers: [PricingService],
+  providers: [PricingService, CuraService],
 })
 export class PricingModule {}
