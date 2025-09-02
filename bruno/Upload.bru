@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://localhost:3000/pricing/stl
+  url: {{baseUrl}}/pricing/stl
   body: multipartForm
   auth: inherit
 }
@@ -15,7 +15,7 @@ headers {
 }
 
 body:multipart-form {
-  file: @file()
+  file: @file(/Users/Karol/Library/Mobile Documents/com~apple~CloudDocs/Kostka_1cm3(1).stl)
 }
 
 settings {
