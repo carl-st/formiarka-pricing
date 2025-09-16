@@ -4,12 +4,14 @@ import {
   UploadedFile,
   UseInterceptors,
   BadRequestException,
+  Body,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname, join } from "path";
 import { promises as fs } from "fs";
 import { PricingService } from "./pricing.service";
+import { PriceRequestDto } from "./dto/price-request.dto";
 
 @Controller("pricing")
 export class PricingController {
@@ -32,7 +34,7 @@ export class PricingController {
         if (!file.originalname.toLowerCase().endsWith(".stl")) {
           return cb(
             new BadRequestException("Only .stl files are allowed"),
-            false,
+            false
           );
         }
         cb(null, true);
@@ -40,16 +42,19 @@ export class PricingController {
       limits: {
         fileSize: 50 * 1024 * 1024, // 50MB
       },
-    }),
+    })
   )
-  async priceFromStl(@UploadedFile() file: Express.Multer.File) {
+  async priceFromStl(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() options: PriceRequestDto
+  ) {
     if (!file) throw new BadRequestException("No file provided");
     const stlPath = join(file.destination, file.filename);
     try {
-      const breakdown = await this.pricing.priceFromStl(stlPath);
+      const breakdown = await this.pricing.priceFromStl(stlPath, options);
       return {
-        file: file.originalname,
-        breakdown,
+        filename: file.originalname,
+        ...breakdown,
       };
     } finally {
       try {

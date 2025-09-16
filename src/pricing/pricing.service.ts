@@ -5,16 +5,20 @@ import * as path from "path";
 import { ConfigService } from "../config/config.service";
 import { GcodeParser } from "./gcode.parser";
 import { PriceBreakdown } from "./dto/price-breakdown.dto";
+import { Infill, PriceRequestDto, Quality } from "./dto/price-request.dto";
 
 @Injectable()
 export class PricingService {
   constructor(private readonly config: ConfigService) {}
 
-  async priceFromStl(stlPath: string): Promise<PriceBreakdown> {
+  async priceFromStl(
+    stlPath: string,
+    options: PriceRequestDto
+  ): Promise<PriceBreakdown> {
     const tmpDir = this.config.tempDir;
     const gcodePath = path.join(tmpDir, `slice-${Date.now()}.gcode`);
 
-    await this.runPrusaSlicer(stlPath, gcodePath);
+    await this.runPrusaSlicer(stlPath, gcodePath, options);
 
     const gcode = await fs.readFile(gcodePath, "utf8");
     const stats = GcodeParser.parse(gcode);
@@ -100,13 +104,21 @@ export class PricingService {
     return Math.round(n * 100) / 100;
   }
 
-  private runPrusaSlicer(stlPath: string, gcodePath: string): Promise<void> {
+  private runPrusaSlicer(
+    stlPath: string,
+    gcodePath: string,
+    options: PriceRequestDto
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const args = [
         "--load",
         ...(this.config.prusaConfigBundle
           ? [this.config.prusaConfigBundle]
           : []),
+        "--layer-height",
+        this.getLayerHeight(options.quality),
+        "--fill-density",
+        this.getFillDensity(options.infill),
         "--gcode", // output G-code
         "--output",
         gcodePath,
@@ -123,5 +135,31 @@ export class PricingService {
         else reject(new Error(`PrusaSlicer failed (${code}): ${stderr}`));
       });
     });
+  }
+
+  private getLayerHeight(quality: Quality): string {
+    switch (quality) {
+      case Quality.DRAFT:
+        return "0.3";
+      case Quality.NORMAL:
+        return "0.2";
+      case Quality.FINE:
+        return "0.1";
+      default:
+        return "0.2";
+    }
+  }
+
+  private getFillDensity(infill: Infill): string {
+    switch (infill) {
+      case Infill.LOW:
+        return "15%";
+      case Infill.MEDIUM:
+        return "30%";
+      case Infill.HIGH:
+        return "50%";
+      default:
+        return "30%";
+    }
   }
 }

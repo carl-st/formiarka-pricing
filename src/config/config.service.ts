@@ -4,7 +4,7 @@ dotenv.config();
 
 export class ConfigService {
   get port(): number {
-    return parseInt(process.env.PORT || "3000", 10);
+    return parseInt(process.env.PORT || "3001", 10);
   }
 
   get prusaSlicerPath(): string {

@@ -51,9 +51,9 @@ RUN mkdir -p /tmp && chmod 1777 /tmp
 
 # Healthcheck (optional)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:'+ (process.env.PORT||3000) +'/pricing/health',()=>process.exit(0)).on('error',()=>process.exit(1))" || exit 1
+    CMD node -e "require('http').get('http://localhost:'+ (process.env.PORT||3001) +'/pricing/health',()=>process.exit(0)).on('error',()=>process.exit(1))" || exit 1
 
-EXPOSE 3000
+EXPOSE 3001
 
 # Create a script to start Xvfb and the Node.js app
 RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1024x768x24 &\nexec "$@"' > /start.sh && chmod +x /start.sh

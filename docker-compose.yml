@@ -4,18 +4,18 @@ services:
     build: .
     container_name: print-pricing
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
-      - PORT=3000
+      - PORT=3001
       - CURRENCY=PLN
-      - FILAMENT_COST_PER_KG=90
-      - ENERGY_COST_PER_KWH=1.2
-      - PRINTER_POWER_W=120
+      - FILAMENT_COST_PER_KG=100
+      - ENERGY_COST_PER_KWH=1.5
+      - PRINTER_POWER_W=200
       - HOURLY_RATE=20
       - MAINTENANCE_RATE_PER_HOUR=5
-      - MARKUP_PCT=10
-      - MIN_JOB_FEE=15
-      - PRUSA_CONFIG_BUNDLE=/configs/bundle.ini
+      - MARKUP_PCT=50
+      - MIN_JOB_FEE=0
+      - PRUSA_CONFIG_BUNDLE=/configs/printer.ini
       - TMP_DIR=/tmp
     volumes:
       - tmpdata:/tmp
