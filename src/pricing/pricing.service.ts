@@ -116,9 +116,9 @@ export class PricingService {
           ? [this.config.prusaConfigBundle]
           : []),
         "--layer-height",
-        this.getLayerHeight(options.quality),
+        this.getLayerHeight(options.quality.toLowerCase() as Quality),
         "--fill-density",
-        this.getFillDensity(options.infill),
+        this.getFillDensity(options.infill.toLowerCase() as Infill),
         "--gcode", // output G-code
         "--output",
         gcodePath,
@@ -139,11 +139,11 @@ export class PricingService {
 
   private getLayerHeight(quality: Quality): string {
     switch (quality) {
-      case Quality.DRAFT:
+      case Quality.STANDARD:
         return "0.3";
-      case Quality.NORMAL:
+      case Quality.MEDIUM:
         return "0.2";
-      case Quality.FINE:
+      case Quality.PREMIUM:
         return "0.1";
       default:
         return "0.2";
@@ -152,11 +152,11 @@ export class PricingService {
 
   private getFillDensity(infill: Infill): string {
     switch (infill) {
-      case Infill.LOW:
+      case Infill.STANDARD:
         return "15%";
       case Infill.MEDIUM:
         return "30%";
-      case Infill.HIGH:
+      case Infill.PREMIUM:
         return "50%";
       default:
         return "30%";

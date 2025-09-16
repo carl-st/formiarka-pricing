@@ -5,6 +5,7 @@ import {
   UseInterceptors,
   BadRequestException,
   Body,
+  Logger,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
@@ -15,6 +16,7 @@ import { PriceRequestDto } from "./dto/price-request.dto";
 
 @Controller("pricing")
 export class PricingController {
+  private readonly logger = new Logger(PricingController.name);
   constructor(private readonly pricing: PricingService) {}
 
   @Post("stl")
@@ -48,6 +50,9 @@ export class PricingController {
     @UploadedFile() file: Express.Multer.File,
     @Body() options: PriceRequestDto
   ) {
+    this.logger.log(
+      `Pricing ${file.originalname} with options: ${JSON.stringify(options)}`
+    );
     if (!file) throw new BadRequestException("No file provided");
     const stlPath = join(file.destination, file.filename);
     try {
