@@ -6,6 +6,9 @@ import {
   BadRequestException,
   Body,
   Logger,
+  Param,
+  HttpCode,
+  HttpStatus,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
@@ -53,20 +56,66 @@ export class PricingController {
     this.logger.log(
       `Pricing ${file.originalname} with options: ${JSON.stringify(options)}`
     );
+
     if (!file) throw new BadRequestException("No file provided");
+    if (!options.quality || !options.infill) {
+      throw new BadRequestException(
+        "Missing required parameters: quality and infill."
+      );
+    }
+
     const stlPath = join(file.destination, file.filename);
     try {
       const breakdown = await this.pricing.priceFromStl(stlPath, options);
       return {
-        filename: file.originalname,
+        filename: file.filename, // Use the unique server-side filename
+        originalFilename: file.originalname,
         ...breakdown,
       };
     } finally {
-      try {
-        await fs.unlink(stlPath);
-      } catch {
-        // ignore
-      }
+      // The file is no longer deleted, so it can be used for recalculation.
+      // try {
+      //   await fs.unlink(stlPath);
+      // } catch {
+      //   // ignore
+      // }
     }
+  }
+
+  @Post("recalculate/:filename")
+  @HttpCode(HttpStatus.OK)
+  async recalculatePrice(
+    @Param("filename") filename: string,
+    @Body() options: PriceRequestDto
+  ) {
+    this.logger.log(
+      `Recalculating price for ${filename} with options: ${JSON.stringify(
+        options
+      )}`
+    );
+
+    if (!options.quality || !options.infill) {
+      throw new BadRequestException(
+        "Missing required parameters: quality and infill."
+      );
+    }
+
+    const tmpDir = process.env.TMP_DIR || "/tmp";
+    const stlPath = join(tmpDir, filename);
+
+    try {
+      await fs.access(stlPath);
+    } catch (error) {
+      this.logger.error(`Recalculation failed: file not found at ${stlPath}`);
+      throw new BadRequestException(
+        `File ${filename} not found. It may have been temporary and is now deleted.`
+      );
+    }
+
+    const breakdown = await this.pricing.priceFromStl(stlPath, options);
+    return {
+      filename: filename,
+      ...breakdown,
+    };
   }
 }

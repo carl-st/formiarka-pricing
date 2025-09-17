@@ -3,9 +3,16 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { PricingModule } from "./pricing/pricing.module";
 import { ConfigModule } from "./config/config.module";
+import { ScheduleModule } from "@nestjs/schedule";
+import { CleanupModule } from "./cleanup/cleanup.module";
 
 @Module({
-  imports: [ConfigModule, PricingModule],
+  imports: [
+    ConfigModule,
+    PricingModule,
+    ScheduleModule.forRoot(),
+    CleanupModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
