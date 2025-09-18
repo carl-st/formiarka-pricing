@@ -96,7 +96,7 @@ export class PricingService {
       subtotal: this.round2(subtotal),
       markupAmount: this.round2(markupAmount),
       totalBeforeMin: this.round2(totalBeforeMin),
-      total: this.round2(total),
+      totalPrintCost: this.round2(total),
     };
   }
 

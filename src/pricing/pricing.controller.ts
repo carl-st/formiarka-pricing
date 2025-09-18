@@ -68,7 +68,7 @@ export class PricingController {
     try {
       const breakdown = await this.pricing.priceFromStl(stlPath, options);
       return {
-        filename: file.filename, // Use the unique server-side filename
+        tempFilename: file.filename, // Use the unique server-side filename
         originalFilename: file.originalname,
         ...breakdown,
       };

@@ -29,5 +29,5 @@ export interface PriceBreakdown {
   subtotal: number;
   markupAmount: number;
   totalBeforeMin: number;
-  total: number;
+  totalPrintCost: number;
 }
