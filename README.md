@@ -44,6 +44,16 @@ $ pnpm run start:dev
 $ pnpm run start:prod
 ```
 
+### Run with Docker
+
+```bash
+# build
+docker build -t carlst/formiarka-pricing:1.0 -t carlst/formiarka-pricing:latest .
+
+# run
+docker run --env-file ".env" -d --name formiarka-pricing -p 3001:3001 carlst/formiarka-pricing:latest
+```
+
 ## Run tests
 
 ```bash
