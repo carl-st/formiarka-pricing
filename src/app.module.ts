@@ -5,6 +5,7 @@ import { PricingModule } from "./pricing/pricing.module";
 import { ConfigModule } from "./config/config.module";
 import { ScheduleModule } from "@nestjs/schedule";
 import { CleanupModule } from "./cleanup/cleanup.module";
+import { ShopifyModule } from "./shopify/shopify.module";
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { CleanupModule } from "./cleanup/cleanup.module";
     PricingModule,
     ScheduleModule.forRoot(),
     CleanupModule,
+    ShopifyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -7,5 +7,6 @@ import { ConfigModule } from "../config/config.module";
   imports: [ConfigModule],
   controllers: [PricingController],
   providers: [PricingService],
+  exports: [PricingService],
 })
 export class PricingModule {}
