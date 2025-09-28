@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname, join } from "path";
@@ -17,12 +18,19 @@ import { promises as fs } from "fs";
 import { PricingService } from "./pricing.service";
 import { PriceRequestDto } from "./dto/price-request.dto";
 
+@ApiTags("pricing")
 @Controller("pricing")
 export class PricingController {
   private readonly logger = new Logger(PricingController.name);
   constructor(private readonly pricing: PricingService) {}
 
   @Post("stl")
+  @ApiOperation({ summary: "Calculate price from an STL file" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    description: "STL file and pricing options",
+    type: PriceRequestDto,
+  })
   @UseInterceptors(
     FileInterceptor("file", {
       storage: diskStorage({
@@ -68,8 +76,8 @@ export class PricingController {
     try {
       const breakdown = await this.pricing.priceFromStl(stlPath, options);
       return {
-        tempFilename: file.filename, // Use the unique server-side filename
         originalFilename: file.originalname,
+        tempFilename: file.filename, // Use the unique server-side filename
         ...breakdown,
       };
     } finally {
@@ -83,6 +91,7 @@ export class PricingController {
   }
 
   @Post("recalculate/:filename")
+  @ApiOperation({ summary: "Recalculate price for an existing file" })
   @HttpCode(HttpStatus.OK)
   async recalculatePrice(
     @Param("filename") filename: string,

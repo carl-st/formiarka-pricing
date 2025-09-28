@@ -5,12 +5,14 @@ import {
   Logger,
   BadRequestException,
 } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ShopifyService } from "./shopify.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { PricingService } from "../pricing/pricing.service";
 import { promises as fs } from "fs";
 import { join } from "path";
 
+@ApiTags("shopify")
 @Controller("shopify")
 export class ShopifyController {
   private readonly logger = new Logger(ShopifyController.name);
@@ -21,6 +23,7 @@ export class ShopifyController {
   ) {}
 
   @Post("create-order")
+  @ApiOperation({ summary: "Create a Shopify order from a priced file" })
   async createOrder(@Body() createOrderDto: CreateOrderDto) {
     this.logger.log(
       `Creating Shopify order for file: ${
@@ -28,7 +31,7 @@ export class ShopifyController {
       } with options: ${JSON.stringify(createOrderDto.options)}`
     );
 
-    const { filename, options } = createOrderDto;
+    const { filename, options, customer } = createOrderDto;
 
     if (!filename || !options || !options.quality || !options.infill) {
       throw new BadRequestException(
@@ -55,8 +58,8 @@ export class ShopifyController {
 
     const shopifyOrder = await this.shopifyService.createOrder(
       priceBreakdown,
-      filename,
-      stlPath
+      customer,
+      options
     );
 
     return {

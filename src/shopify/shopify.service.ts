@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "../config/config.service";
-import { PriceBreakdown } from "./../pricing/dto/price-breakdown.dto";
+import { PriceBreakdown, Customer } from "./../pricing/dto/price-breakdown.dto";
+import { PriceRequestDto } from "./../pricing/dto/price-request.dto";
 import { createAdminApiClient } from "@shopify/admin-api-client";
 import type { AdminApiClient } from "@shopify/admin-api-client";
 import { ApiVersion } from "@shopify/shopify-api";
@@ -37,10 +38,12 @@ export class ShopifyService {
 
   async createOrder(
     priceBreakdown: PriceBreakdown,
-    filename: string,
-    stlPath: string
+    customer: Partial<Customer>,
+    options: PriceRequestDto
   ): Promise<any> {
-    this.logger.log(`Creating Shopify draft order for ${filename}`);
+    this.logger.log(
+      `Creating Shopify draft order for ${priceBreakdown.originalFilename} for customer ${customer.email}`
+    );
 
     // Note on file uploads: Shopify's GraphQL API for Draft Orders doesn't directly
     // support file attachments on line items. A common pattern is to upload the
@@ -48,53 +51,112 @@ export class ShopifyService {
     // and then reference the returned file GID in a custom attribute on the line item.
     // For simplicity, we'll just add the filename as a property for now.
 
-    const draftOrderInput = {
+    const customAttributes = [
+      {
+        key: "Material",
+        value: `${priceBreakdown.filamentG.toFixed(2)}g`,
+      },
+      {
+        key: "Print Time",
+        value: `${(priceBreakdown.printTimeSeconds / 3600).toFixed(2)} hours`,
+      },
+      {
+        key: "Original STL Filename",
+        value: priceBreakdown.originalFilename,
+      },
+      {
+        key: "Temporary STL Filename",
+        value: priceBreakdown.tempFilename,
+      },
+      {
+        key: "Material Cost",
+        value: `${priceBreakdown.materialCost.toFixed(2)} PLN`,
+      },
+      {
+        key: "Energy Cost",
+        value: `${priceBreakdown.energyCost.toFixed(2)} PLN`,
+      },
+      {
+        key: "Maintenance Cost",
+        value: `${priceBreakdown.maintenanceCost.toFixed(2)} PLN`,
+      },
+      {
+        key: "Markup",
+        value: `${priceBreakdown.markupAmount.toFixed(2)} PLN (${
+          priceBreakdown.markupPct
+        }%)`,
+      },
+    ];
+
+    if (options) {
+      if (options.quality) {
+        customAttributes.push({ key: "Quality", value: options.quality });
+      }
+      if (options.infill) {
+        customAttributes.push({ key: "Infill", value: options.infill });
+      }
+    }
+
+    if (customer) {
+      if (customer.filamentType) {
+        customAttributes.push({
+          key: "Filament Type",
+          value: customer.filamentType,
+        });
+      }
+      if (customer.color) {
+        customAttributes.push({ key: "Color", value: customer.color });
+      }
+      if (customer.amount) {
+        customAttributes.push({
+          key: "Amount",
+          value: customer.amount.toString(),
+        });
+      }
+      if (customer.delivery) {
+        customAttributes.push({ key: "Delivery", value: customer.delivery });
+      }
+      if (customer.payment) {
+        customAttributes.push({ key: "Payment", value: customer.payment });
+      }
+      if (customer.invoice) {
+        customAttributes.push({
+          key: "Invoice Required",
+          value: customer.invoice.toString(),
+        });
+      }
+      if (customer.terms) {
+        customAttributes.push({
+          key: "Terms Accepted",
+          value: customer.terms.toString(),
+        });
+      }
+    }
+
+    const draftOrderInput: any = {
       lineItems: [
         {
-          title: `3D Print - ${filename}`,
+          title: `3D Print - ${priceBreakdown.originalFilename}`,
           originalUnitPrice: priceBreakdown.totalPrintCost.toFixed(2),
           quantity: 1,
-          customAttributes: [
-            {
-              key: "Material",
-              value: `${priceBreakdown.filamentG.toFixed(2)}g`,
-            },
-            {
-              key: "Print Time",
-              value: `${(priceBreakdown.printTimeSeconds / 3600).toFixed(
-                2
-              )} hours`,
-            },
-            {
-              key: "STL Filename",
-              value: filename,
-            },
-            {
-              key: "Material Cost",
-              value: `${priceBreakdown.materialCost.toFixed(2)} PLN`,
-            },
-            {
-              key: "Energy Cost",
-              value: `${priceBreakdown.energyCost.toFixed(2)} PLN`,
-            },
-            {
-              key: "Labor Cost",
-              value: `${priceBreakdown.laborCost.toFixed(2)} PLN`,
-            },
-            {
-              key: "Maintenance Cost",
-              value: `${priceBreakdown.maintenanceCost.toFixed(2)} PLN`,
-            },
-            {
-              key: "Markup",
-              value: `${priceBreakdown.markupAmount.toFixed(2)} PLN (${
-                priceBreakdown.markupPct
-              }%)`,
-            },
-          ],
+          customAttributes: customAttributes,
         },
       ],
     };
+
+    if (customer) {
+      draftOrderInput.email = customer.email;
+      draftOrderInput.note = customer.notes;
+      draftOrderInput.shippingAddress = {
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        phone: customer.phone,
+      };
+      draftOrderInput.billingAddress = {
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+      };
+    }
 
     try {
       this.logger.debug(
