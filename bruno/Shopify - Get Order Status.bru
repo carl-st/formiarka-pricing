@@ -1,0 +1,15 @@
+meta {
+  name: Shopify - Get Order Status
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/shopify/order-status/:draftOrderId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  draftOrderId: 1234567890
+}

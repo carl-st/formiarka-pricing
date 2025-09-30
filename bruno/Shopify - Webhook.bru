@@ -1,0 +1,24 @@
+meta {
+  name: Shopify - Webhook
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/shopify/webhook
+  body: json
+  auth: none
+}
+
+headers {
+  x-shopify-hmac-sha256: {{shopify_hmac_sha256}}
+  x-shopify-topic: orders/paid
+}
+
+body:json {
+  {
+    "draft_order_id": 1234567890,
+    "id": 9876543210,
+    "financial_status": "paid"
+  }
+}

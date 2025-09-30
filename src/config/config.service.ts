@@ -67,4 +67,11 @@ export class ConfigService {
   get shopifyApiVersion(): string {
     return process.env.SHOPIFY_API_VERSION || "2025-07";
   }
+
+  get shopifySharedSecret(): string {
+    if (!process.env.SHOPIFY_SHARED_SECRET) {
+      throw new Error("SHOPIFY_SHARED_SECRET is not defined in .env");
+    }
+    return process.env.SHOPIFY_SHARED_SECRET;
+  }
 }
