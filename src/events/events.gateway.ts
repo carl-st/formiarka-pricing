@@ -4,13 +4,13 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketServer,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { Logger } from "@nestjs/common";
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // Allow all origins for now, should be restricted in production
+    origin: "*", // Allow all origins for now, should be restricted in production
   },
 })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -35,7 +35,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('subscribeToOrder')
+  @SubscribeMessage("subscribeToOrder")
   handleSubscribeToOrder(client: Socket, draftOrderId: string): void {
     this.logger.log(`Client ${client.id} subscribing to order ${draftOrderId}`);
     this.clients.set(draftOrderId, client);
@@ -47,7 +47,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(
         `Emitting order status update for ${draftOrderId} to client ${client.id}`,
       );
-      client.emit('orderStatusUpdate', status);
+      client.emit("orderStatusUpdate", status);
     } else {
       this.logger.warn(`No client subscribed to order ${draftOrderId}`);
     }

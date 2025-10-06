@@ -47,7 +47,7 @@ export class PricingController {
         if (!file.originalname.toLowerCase().endsWith(".stl")) {
           return cb(
             new BadRequestException("Only .stl files are allowed"),
-            false
+            false,
           );
         }
         cb(null, true);
@@ -55,20 +55,20 @@ export class PricingController {
       limits: {
         fileSize: 50 * 1024 * 1024, // 50MB
       },
-    })
+    }),
   )
   async priceFromStl(
     @UploadedFile() file: Express.Multer.File,
-    @Body() options: PriceRequestDto
+    @Body() options: PriceRequestDto,
   ) {
     this.logger.log(
-      `Pricing ${file.originalname} with options: ${JSON.stringify(options)}`
+      `Pricing ${file.originalname} with options: ${JSON.stringify(options)}`,
     );
 
     if (!file) throw new BadRequestException("No file provided");
     if (!options.quality || !options.infill) {
       throw new BadRequestException(
-        "Missing required parameters: quality and infill."
+        "Missing required parameters: quality and infill.",
       );
     }
 
@@ -95,17 +95,17 @@ export class PricingController {
   @HttpCode(HttpStatus.OK)
   async recalculatePrice(
     @Param("filename") filename: string,
-    @Body() options: PriceRequestDto
+    @Body() options: PriceRequestDto,
   ) {
     this.logger.log(
       `Recalculating price for ${filename} with options: ${JSON.stringify(
-        options
-      )}`
+        options,
+      )}`,
     );
 
     if (!options.quality || !options.infill) {
       throw new BadRequestException(
-        "Missing required parameters: quality and infill."
+        "Missing required parameters: quality and infill.",
       );
     }
 
@@ -117,7 +117,7 @@ export class PricingController {
     } catch (error) {
       this.logger.error(`Recalculation failed: file not found at ${stlPath}`);
       throw new BadRequestException(
-        `File ${filename} not found. It may have been temporary and is now deleted.`
+        `File ${filename} not found. It may have been temporary and is now deleted.`,
       );
     }
 

@@ -105,9 +105,12 @@ export class ShopifyService implements OnModuleInit {
         },
       ],
       shippingLine: {
+        shippingRateHandle: "inpost_paczkomat",
         title: "InPost Paczkomat",
-        price: "16.99",
-        code: "INPOST_STANDARD",
+        priceWithCurrency: {
+          amount: "16.99",
+          currencyCode: "PLN",
+        },
       },
     };
 
@@ -118,10 +121,23 @@ export class ShopifyService implements OnModuleInit {
         firstName: customer.firstName,
         lastName: customer.lastName,
         phone: customer.phone,
+        address1: customer.address1,
+        address2: customer.address2,
+        city: customer.city,
+        zip: customer.zip,
+        countryCode: customer.countryCode,
+        company: customer.company,
       };
       draftOrderInput.billingAddress = {
         firstName: customer.firstName,
         lastName: customer.lastName,
+        phone: customer.phone,
+        address1: customer.address1,
+        address2: customer.address2,
+        city: customer.city,
+        zip: customer.zip,
+        countryCode: customer.countryCode,
+        company: customer.company,
       };
     }
 
@@ -135,6 +151,23 @@ export class ShopifyService implements OnModuleInit {
             draftOrder {
               id
               invoiceUrl
+              shippingAddress {
+                id
+                firstName
+                lastName
+                phone
+                address1
+                address2
+                city
+                zip
+                countryCode
+                company
+              }
+              shippingLine {
+                id
+                title
+                price
+              }
             }
             userErrors {
               field

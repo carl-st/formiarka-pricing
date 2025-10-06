@@ -37,18 +37,18 @@ export class CleanupService {
           }
         } catch (err) {
           this.logger.error(
-            `Failed to process file ${filePath}: ${err.message}`
+            `Failed to process file ${filePath}: ${err.message}`,
           );
         }
       }
     } catch (err) {
       if (err.code === "ENOENT") {
         this.logger.log(
-          `Temporary directory ${tmpDir} not found, skipping cleanup.`
+          `Temporary directory ${tmpDir} not found, skipping cleanup.`,
         );
       } else {
         this.logger.error(
-          `Failed to read temporary directory ${tmpDir}: ${err.message}`
+          `Failed to read temporary directory ${tmpDir}: ${err.message}`,
         );
       }
     }

@@ -46,6 +46,12 @@ export interface Customer {
   lastName: string;
   email: string;
   phone: string;
+  company?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  zip?: string;
+  countryCode?: string;
   invoice: boolean;
   payment: string;
   terms: boolean;

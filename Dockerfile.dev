@@ -1,0 +1,52 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl libglu1-mesa libglib2.0-0 libsm6 libxrender1 libxext6 libx11-6 libxkbcommon0 \
+    mesa-utils libegl1-mesa libgl1-mesa-glx libgl1-mesa-dri xvfb \
+    libgtk-3-0 libgdk-pixbuf2.0-0 libcairo-gobject2 libpango-1.0-0 libatk1.0-0 \
+    libcairo2 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libpango-1.0-0 \
+    libharfbuzz0b libfontconfig1 libfreetype6 libx11-xcb1 libxcb1 libxcursor1 \
+    libxi6 libxrandr2 libxss1 libxcomposite1 libxdamage1 libxfixes3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PrusaSlicer via AppImage (headless)
+# Update version as needed
+ENV PRUSASLICER_VERSION=2.7.4
+ENV PRUSASLICER_GITHUB_VERSION="2.7.4+linux-x64-GTK3-202404050928"
+WORKDIR /opt
+# https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928.AppImage
+RUN curl -L -o PrusaSlicer.AppImage https://github.com/prusa3d/PrusaSlicer/releases/download/version_${PRUSASLICER_VERSION}/PrusaSlicer-${PRUSASLICER_GITHUB_VERSION}.AppImage \
+    && chmod +x PrusaSlicer.AppImage \
+    && ./PrusaSlicer.AppImage --appimage-extract \
+    && ln -s /opt/squashfs-root/usr/bin/prusa-slicer /usr/local/bin/prusa-slicer
+
+# Set environment variables for headless OpenGL
+ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV GALLIUM_DRIVER=llvmpipe
+ENV DISPLAY=:99
+
+# App setup
+WORKDIR /app
+
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN pnpm install
+
+# Copy the rest of the application
+COPY . .
+
+# Expose the port
+EXPOSE 3001
+
+# Create a script to start Xvfb and the Node.js app
+RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1024x768x24 &\nexec "$@"' > /start.sh && chmod +x /start.sh
+
+# Start the development server
+CMD ["/start.sh", "pnpm", "run", "start:dev"]

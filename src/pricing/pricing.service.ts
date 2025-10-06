@@ -13,7 +13,7 @@ export class PricingService {
 
   async priceFromStl(
     stlPath: string,
-    options: PriceRequestDto
+    options: PriceRequestDto,
   ): Promise<PriceBreakdown> {
     const tmpDir = this.config.tempDir;
     const gcodePath = path.join(tmpDir, `slice-${Date.now()}.gcode`);
@@ -52,7 +52,7 @@ export class PricingService {
       throw new Error("Unable to compute filament mass in grams");
     }
 
-    const printTimeSeconds = stats.printTimeSeconds!;
+    const printTimeSeconds = stats.printTimeSeconds;
     const printHours = printTimeSeconds / 3600;
 
     // Costs
@@ -107,7 +107,7 @@ export class PricingService {
   private runPrusaSlicer(
     stlPath: string,
     gcodePath: string,
-    options: PriceRequestDto
+    options: PriceRequestDto,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const args = [

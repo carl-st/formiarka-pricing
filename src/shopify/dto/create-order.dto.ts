@@ -49,6 +49,62 @@ class CustomerDto implements Partial<Customer> {
   phone: string;
 
   @ApiProperty({
+    description: "The company of the customer.",
+    example: "ACME Inc.",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  company: string;
+
+  @ApiProperty({
+    description: "The first line of the customer's shipping address.",
+    example: "123 Main St",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  address1: string;
+
+  @ApiProperty({
+    description:
+      "The second line of the customer's shipping address (e.g., apartment, suite).",
+    example: "Apt 4B",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  address2: string;
+
+  @ApiProperty({
+    description: "The city of the customer's shipping address.",
+    example: "Anytown",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  city: string;
+
+  @ApiProperty({
+    description: "The ZIP or postal code of the customer's shipping address.",
+    example: "12345",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  zip: string;
+
+  @ApiProperty({
+    description:
+      "The two-letter country code of the customer's shipping address.",
+    example: "US",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  countryCode: string;
+
+  @ApiProperty({
     description: "Additional notes for the order.",
     example: "This is a test order.",
     required: false,
