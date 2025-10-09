@@ -183,7 +183,7 @@ export class CreateOrderDto {
     example: "upload-1758657443441-270817965.stl",
   })
   @IsString()
-  filename: string;
+  tempFilename: string;
 
   @ApiProperty({ description: "The pricing options for the print." })
   @ValidateNested()

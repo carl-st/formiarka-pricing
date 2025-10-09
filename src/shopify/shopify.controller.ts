@@ -13,8 +13,6 @@ import { ApiOperation, ApiTags, ApiExcludeEndpoint } from "@nestjs/swagger";
 import { ShopifyService } from "./shopify.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { PricingService } from "../pricing/pricing.service";
-import { promises as fs } from "fs";
-import { join } from "path";
 import { EventsGateway } from "../events/events.gateway";
 import type { Request } from "express";
 
@@ -34,32 +32,20 @@ export class ShopifyController {
   async createOrder(@Body() createOrderDto: CreateOrderDto) {
     this.logger.log(
       `Creating Shopify order for file: ${
-        createOrderDto.filename
+        createOrderDto.tempFilename
       } with options: ${JSON.stringify(createOrderDto.options)}`,
     );
 
-    const { filename, options, customer } = createOrderDto;
+    const { tempFilename, options, customer } = createOrderDto;
 
-    if (!filename || !options || !options.quality || !options.infill) {
+    if (!tempFilename || !options || !options.quality || !options.infill) {
       throw new BadRequestException(
-        "Missing required parameters: filename, quality, and infill.",
-      );
-    }
-
-    const tmpDir = process.env.TMP_DIR || "/tmp";
-    const stlPath = join(tmpDir, filename);
-
-    try {
-      await fs.access(stlPath);
-    } catch (error) {
-      this.logger.error(`File not found at ${stlPath}`);
-      throw new BadRequestException(
-        `File ${filename} not found. It may have been temporary and is now deleted.`,
+        "Missing required parameters: tempFilename, quality, and infill.",
       );
     }
 
     const priceBreakdown = await this.pricingService.priceFromStl(
-      stlPath,
+      tempFilename,
       options,
     );
 

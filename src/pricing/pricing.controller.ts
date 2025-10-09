@@ -66,20 +66,14 @@ export class PricingController {
     );
 
     if (!file) throw new BadRequestException("No file provided");
-    if (!options.quality || !options.infill) {
+    if (!options.quality || !options.infill || !options.originalFilename) {
       throw new BadRequestException(
-        "Missing required parameters: quality and infill.",
+        "Missing required parameters: quality, infill, and originalFilename.",
       );
     }
 
-    const stlPath = join(file.destination, file.filename);
     try {
-      const breakdown = await this.pricing.priceFromStl(stlPath, options);
-      return {
-        originalFilename: file.originalname,
-        tempFilename: file.filename, // Use the unique server-side filename
-        ...breakdown,
-      };
+      return await this.pricing.priceFromStl(file.filename, options);
     } finally {
       // The file is no longer deleted, so it can be used for recalculation.
       // try {
@@ -90,15 +84,15 @@ export class PricingController {
     }
   }
 
-  @Post("recalculate/:filename")
+  @Post("recalculate/:tempFilename")
   @ApiOperation({ summary: "Recalculate price for an existing file" })
   @HttpCode(HttpStatus.OK)
   async recalculatePrice(
-    @Param("filename") filename: string,
+    @Param("tempFilename") tempFilename: string,
     @Body() options: PriceRequestDto,
   ) {
     this.logger.log(
-      `Recalculating price for ${filename} with options: ${JSON.stringify(
+      `Recalculating price for ${tempFilename} with options: ${JSON.stringify(
         options,
       )}`,
     );
@@ -109,21 +103,10 @@ export class PricingController {
       );
     }
 
-    const tmpDir = process.env.TMP_DIR || "/tmp";
-    const stlPath = join(tmpDir, filename);
-
-    try {
-      await fs.access(stlPath);
-    } catch (error) {
-      this.logger.error(`Recalculation failed: file not found at ${stlPath}`);
-      throw new BadRequestException(
-        `File ${filename} not found. It may have been temporary and is now deleted.`,
-      );
-    }
-
-    const breakdown = await this.pricing.priceFromStl(stlPath, options);
+    const breakdown = await this.pricing.priceFromStl(tempFilename, options);
     return {
-      filename: filename,
+      originalFilename: options.originalFilename,
+      tempFilename: tempFilename,
       ...breakdown,
     };
   }

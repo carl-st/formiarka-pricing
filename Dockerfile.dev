@@ -1,7 +1,10 @@
+# Development stage with PrusaSlicer and hot-reload setup
 FROM node:20-slim
 
-WORKDIR /app
+# Install pnpm
+RUN npm install -g pnpm
 
+# Install dependencies for PrusaSlicer
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl libglu1-mesa libglib2.0-0 libsm6 libxrender1 libxext6 libx11-6 libxkbcommon0 \
@@ -13,11 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PrusaSlicer via AppImage (headless)
-# Update version as needed
 ENV PRUSASLICER_VERSION=2.7.4
 ENV PRUSASLICER_GITHUB_VERSION="2.7.4+linux-x64-GTK3-202404050928"
 WORKDIR /opt
-# https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.4/PrusaSlicer-2.7.4+linux-x64-GTK3-202404050928.AppImage
 RUN curl -L -o PrusaSlicer.AppImage https://github.com/prusa3d/PrusaSlicer/releases/download/version_${PRUSASLICER_VERSION}/PrusaSlicer-${PRUSASLICER_GITHUB_VERSION}.AppImage \
     && chmod +x PrusaSlicer.AppImage \
     && ./PrusaSlicer.AppImage --appimage-extract \
@@ -30,23 +31,26 @@ ENV DISPLAY=:99
 
 # App setup
 WORKDIR /app
+ENV NODE_ENV=development
 
-RUN npm install -g pnpm
-
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
-
-# Install dependencies
+# Copy package manager files and install dependencies
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 
-# Copy the rest of the application
+# Copy all other files. The `src` directory can be mounted as a volume for hot-reloading.
 COPY . .
 
-# Expose the port
+# Temp directory for uploads and slices
+RUN mkdir -p /tmp && chmod 1777 /tmp
+
+# Healthcheck (optional)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:'+ (process.env.PORT||3001) +'/pricing/health',()=>process.exit(0)).on('error',()=>process.exit(1))" || exit 1
+
 EXPOSE 3001
 
 # Create a script to start Xvfb and the Node.js app
-RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1024x768x24 &\nexec "$@"' > /start.sh && chmod +x /start.sh
+RUN echo '#!/bin/bash\nrm -f /tmp/.X99-lock\nXvfb :99 -screen 0 1024x768x24 &\nexec "$@"' > /start.sh && chmod +x /start.sh
 
 # Start the development server
 CMD ["/start.sh", "pnpm", "run", "start:dev"]

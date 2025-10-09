@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { spawn } from "child_process";
 import { promises as fs } from "fs";
 import * as path from "path";
@@ -12,10 +12,20 @@ export class PricingService {
   constructor(private readonly config: ConfigService) {}
 
   async priceFromStl(
-    stlPath: string,
+    tempFilename: string,
     options: PriceRequestDto,
   ): Promise<PriceBreakdown> {
     const tmpDir = this.config.tempDir;
+    const stlPath = path.join(tmpDir, tempFilename);
+
+    try {
+      await fs.access(stlPath);
+    } catch (error) {
+      throw new BadRequestException(
+        `File ${tempFilename} not found. It may have been temporary and is now deleted.`,
+      );
+    }
+
     const gcodePath = path.join(tmpDir, `slice-${Date.now()}.gcode`);
 
     await this.runPrusaSlicer(stlPath, gcodePath, options);
@@ -77,6 +87,8 @@ export class PricingService {
     }
 
     return {
+      tempFilename: tempFilename,
+      originalFilename: options.originalFilename,
       currency: process.env.CURRENCY || "PLN",
       filamentCostPerKg: this.config.filamentCostPerKg,
       energyCostPerKwh: this.config.energyCostPerKwh,

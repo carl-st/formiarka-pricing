@@ -151,23 +151,6 @@ export class ShopifyService implements OnModuleInit {
             draftOrder {
               id
               invoiceUrl
-              shippingAddress {
-                id
-                firstName
-                lastName
-                phone
-                address1
-                address2
-                city
-                zip
-                countryCode
-                company
-              }
-              shippingLine {
-                id
-                title
-                price
-              }
             }
             userErrors {
               field
