@@ -8,7 +8,7 @@ import type { AdminApiClient } from "@shopify/admin-api-client";
 import { ApiVersion } from "@shopify/shopify-api";
 
 @Injectable()
-export class ShopifyService implements OnModuleInit {
+export class ShopifyService {
   private readonly logger = new Logger(ShopifyService.name);
   private readonly client: AdminApiClient;
 
@@ -195,18 +195,55 @@ export class ShopifyService implements OnModuleInit {
     }
   }
 
-  async getOrderStatus(draftOrderId: string): Promise<any> {
-    this.logger.log(`Getting status for Shopify draft order ${draftOrderId}`);
+  async verifyWebhook(hmac: string, body: Buffer | object): Promise<boolean> {
+    // IMPORTANT: This validation requires the raw request body.
+    // If 'body' is an object, it's assumed to be parsed JSON, which is not secure for HMAC validation.
+    // Your application should be configured to provide the raw body for this webhook endpoint.
+    const secret = this.configService.shopifySharedSecret;
+    if (!secret) {
+      this.logger.error("Shopify webhook secret is not configured.");
+      return false;
+    }
+
+    const rawBody = Buffer.isBuffer(body)
+      ? body.toString("utf8")
+      : JSON.stringify(body);
+
+    if (!Buffer.isBuffer(body)) {
+      this.logger.warn(
+        "HMAC validation is being performed on a stringified object. This is not recommended for production. Please configure raw body parsing for webhooks.",
+      );
+    }
+
+    const generatedHmac = crypto
+      .createHmac("sha256", secret)
+      .update(rawBody, "utf-8")
+      .digest("base64");
 
     try {
+      return crypto.timingSafeEqual(
+        Buffer.from(hmac),
+        Buffer.from(generatedHmac),
+      );
+    } catch (e) {
+      this.logger.error(
+        `Error during HMAC comparison: ${e.message}. This can happen if the HMACs have different lengths.`,
+      );
+      return false;
+    }
+  }
+
+  async getDraftOrderStatus(draftOrderId: string): Promise<any> {
+    this.logger.log(`Fetching status for draft order ${draftOrderId}`);
+    try {
       const response = await this.client.request(
-        `query getDraftOrder($id: ID!) {
+        `query draftOrder($id: ID!) {
           draftOrder(id: $id) {
             id
             status
             order {
               id
-              displayFinancialStatus
+              financialStatus
             }
           }
         }`,
@@ -219,38 +256,22 @@ export class ShopifyService implements OnModuleInit {
 
       if (response.errors) {
         this.logger.error("GraphQL errors from Shopify API:", response.errors);
-        throw new Error("Failed to get Shopify draft order status.");
-      }
-
-      if (!response.data.draftOrder) {
-        this.logger.error(`Draft order with ID ${draftOrderId} not found.`);
-        throw new Error("Draft order not found.");
-      }
-
-      const { draftOrder } = response.data;
-
-      this.logger.debug(
-        `Draft order status for ${draftOrderId}: ${draftOrder.status}`,
-      );
-
-      if (draftOrder.order) {
-        this.logger.log(
-          `Draft order ${draftOrderId} is associated with order ${draftOrder.order.id}. Financial status: ${draftOrder.order.displayFinancialStatus}`,
+        throw new Error(
+          `Failed to fetch draft order status for ${draftOrderId}.`,
         );
-        return {
-          status: "COMPLETED",
-          financialStatus: draftOrder.order.displayFinancialStatus,
-          orderId: draftOrder.order.id,
-        };
-      } else {
-        this.logger.log(
-          `Draft order ${draftOrderId} is not yet associated with an order. Status: ${draftOrder.status}`,
-        );
-        return {
-          status: draftOrder.status, // e.g., 'OPEN', 'INVOICE_SENT'
-          financialStatus: null,
-        };
       }
+
+      if (response.data.draftOrderCreate?.userErrors?.length > 0) {
+        this.logger.error(
+          "Error fetching draft order status:",
+          response.data.draftOrderCreate.userErrors,
+        );
+        throw new Error(
+          `Failed to fetch draft order status for ${draftOrderId}.`,
+        );
+      }
+
+      return response.data.draftOrder;
     } catch (error) {
       this.logger.error(
         `Error calling Shopify API for draft order status: ${error.message}`,
@@ -258,103 +279,5 @@ export class ShopifyService implements OnModuleInit {
       );
       throw error;
     }
-  }
-
-  async onModuleInit() {
-    await this.registerWebhook();
-  }
-
-  async registerWebhook() {
-    const webhookUrl = `${process.env.HOST}/shopify/webhook`;
-    this.logger.log(
-      `Registering webhook for topic orders/paid at ${webhookUrl}`,
-    );
-
-    const query = `
-      mutation webhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
-        webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
-          webhookSubscription {
-            id
-            endpoint {
-              __typename
-              ... on WebhookHttpEndpoint {
-                callbackUrl
-              }
-            }
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }`;
-
-    const variables = {
-      topic: "ORDERS_PAID",
-      webhookSubscription: {
-        callbackUrl: webhookUrl,
-        format: "JSON",
-      },
-    };
-
-    try {
-      // First, check if the webhook already exists
-      const existingWebhooksResponse = await this.client.request(
-        `query webhookSubscriptions($first: Int!) {
-          webhookSubscriptions(first: $first) {
-            edges {
-              node {
-                id
-                topic
-                endpoint {
-                  __typename
-                  ... on WebhookHttpEndpoint {
-                    callbackUrl
-                  }
-                }
-              }
-            }
-          }
-        }`,
-        { variables: { first: 10 } },
-      );
-
-      const existingWebhook =
-        existingWebhooksResponse.data.webhookSubscriptions.edges.find(
-          (edge: any) =>
-            edge.node.topic === "ORDERS_PAID" &&
-            edge.node.endpoint.callbackUrl === webhookUrl,
-        );
-
-      if (existingWebhook) {
-        this.logger.log("Webhook already registered.");
-        return;
-      }
-
-      const response = await this.client.request(query, { variables });
-      if (response.data.webhookSubscriptionCreate.userErrors.length > 0) {
-        this.logger.error(
-          "Error registering webhook:",
-          response.data.webhookSubscriptionCreate.userErrors,
-        );
-      } else {
-        this.logger.log("Webhook registered successfully.");
-      }
-    } catch (error) {
-      this.logger.error("Error registering webhook:", error);
-    }
-  }
-
-  verifyWebhook(hmac: string, rawBody: Buffer): boolean {
-    if (!hmac || !rawBody) {
-      return false;
-    }
-
-    const generatedHmac = crypto
-      .createHmac("sha256", this.configService.shopifySharedSecret)
-      .update(rawBody)
-      .digest("base64");
-
-    return hmac === generatedHmac;
   }
 }

@@ -5,11 +5,11 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/shopify/order-status/:draftOrderId
+  url: {{baseUrl}}/shopify/draft-orders/:id/status
   body: none
   auth: inherit
 }
 
 params:path {
-  draftOrderId: 1234567890
+  id: 1234567890
 }

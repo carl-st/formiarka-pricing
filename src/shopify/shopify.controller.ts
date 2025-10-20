@@ -9,7 +9,7 @@ import {
   Req,
   Headers,
 } from "@nestjs/common";
-import { ApiOperation, ApiTags, ApiExcludeEndpoint } from "@nestjs/swagger";
+import { ApiOperation, ApiTags, ApiBody, ApiHeader } from "@nestjs/swagger";
 import { ShopifyService } from "./shopify.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { PricingService } from "../pricing/pricing.service";
@@ -27,11 +27,11 @@ export class ShopifyController {
     private readonly eventsGateway: EventsGateway,
   ) {}
 
-  @Post("create-order")
-  @ApiOperation({ summary: "Create a Shopify order from a priced file" })
+  @Post("draft-orders")
+  @ApiOperation({ summary: "Create a Shopify draft order from a priced file" })
   async createOrder(@Body() createOrderDto: CreateOrderDto) {
     this.logger.log(
-      `Creating Shopify order for file: ${
+      `Creating Shopify draft order for file: ${
         createOrderDto.tempFilename
       } with options: ${JSON.stringify(createOrderDto.options)}`,
     );
@@ -56,64 +56,88 @@ export class ShopifyController {
     );
 
     return {
-      message: "Shopify order created successfully.",
+      message: "Shopify draft order created successfully.",
       order: shopifyOrder,
     };
   }
 
-  @Get("order-status/:draftOrderId")
-  @ApiOperation({
-    summary: "Check the payment status of a Shopify draft order",
-  })
-  async getOrderStatus(@Param("draftOrderId") draftOrderId: string) {
-    this.logger.log(`Checking status for draft order: ${draftOrderId}`);
-
-    const status = await this.shopifyService.getOrderStatus(draftOrderId);
-    return {
-      message: "Order status retrieved successfully!",
-      status: status,
-    };
+  @Get("draft-orders/:id/status")
+  @ApiOperation({ summary: "Get the status of a Shopify draft order" })
+  async getDraftOrderStatus(@Param("id") draftOrderId: string) {
+    this.logger.log(`Getting status for draft order: ${draftOrderId}`);
+    // The ID from the URL will be just the number, but Shopify's GQL API needs the full GID.
+    const gid = `gid://shopify/DraftOrder/${draftOrderId}`;
+    return this.shopifyService.getDraftOrderStatus(gid);
   }
 
-  @Post("webhook")
-  @ApiExcludeEndpoint()
+  @Post("webhooks")
+  @ApiOperation({
+    summary: "Handle Shopify webhooks for order and draft order updates.",
+  })
+  @ApiHeader({
+    name: "x-shopify-hmac-sha256",
+    description: "HMAC-SHA256 signature of the request body.",
+    required: true,
+  })
+  @ApiHeader({
+    name: "x-shopify-topic",
+    description: "The webhook topic.",
+    required: true,
+  })
   async handleWebhook(
     @Headers("x-shopify-hmac-sha256") hmac: string,
+    @Headers("x-shopify-topic") topic: string,
     @Req() req: Request,
-    @Body() body: any,
   ) {
-    this.logger.log(
-      `Received Shopify webhook for topic ${req.headers["x-shopify-topic"] || "unknown"}`,
-    );
+    this.logger.log(`Received Shopify webhook for topic: ${topic}`);
 
-    const rawBody = (req as any).rawBody;
-    if (!rawBody) {
-      throw new BadRequestException(
-        "Missing raw body for webhook verification",
-      );
+    // IMPORTANT: For HMAC validation to be secure, we need the raw request body.
+    // This requires your NestJS application to be configured to provide it.
+    // For example, in main.ts: `app.use(bodyParser.json({ verify: (req, res, buf) => { req.rawBody = buf } }));`
+    // and then using `req.rawBody` here. We are passing `req.body` which might be a parsed object.
+    // The service method has a fallback, but it is not recommended for production.
+    const body = (req as any).rawBody || req.body;
+    const isValid = await this.shopifyService.verifyWebhook(hmac, body);
+
+    if (!isValid) {
+      this.logger.warn(`Invalid HMAC for Shopify webhook on topic ${topic}.`);
+      throw new BadRequestException("Invalid HMAC signature.");
     }
 
-    const isValid = this.shopifyService.verifyWebhook(hmac, rawBody);
+    this.logger.log(`Valid Shopify webhook received for topic: ${topic}`);
 
-    // if (!isValid) {
-    //   this.logger.warn("Invalid webhook signature");
-    //   throw new BadRequestException("Invalid webhook signature");
-    // }
+    const payload = req.body;
 
-    this.logger.log("Webhook signature verified");
-
-    // Process the webhook
-    const { draft_order_id, id, financial_status } = body;
-
-    if (financial_status === "paid" && draft_order_id) {
-      this.logger.log(`Order ${id} for draft order ${draft_order_id} is paid.`);
-      const draftOrderGid = `gid://shopify/DraftOrder/${draft_order_id}`;
-      this.eventsGateway.emitOrderStatusUpdate(draftOrderGid, {
-        status: "PAID",
-        orderId: id,
-      });
+    if (topic === "orders/create" || topic === "orders/paid") {
+      if (payload.draft_order_id) {
+        const numericDraftOrderId = payload.draft_order_id.toString();
+        const draftOrderIdGid = `gid://shopify/DraftOrder/${numericDraftOrderId}`;
+        const orderIdGid = `gid://shopify/Order/${payload.id}`;
+        this.logger.log(
+          `Order ${orderIdGid} created from draft order ${draftOrderIdGid}. Payment status: ${payload.financial_status}`,
+        );
+        this.eventsGateway.emitOrderStatusUpdate(numericDraftOrderId, {
+          draftOrderId: draftOrderIdGid,
+          orderId: orderIdGid,
+          status: payload.financial_status,
+        });
+      }
+    } else if (topic === "draft_orders/update") {
+      if (payload.status === "completed") {
+        const draftOrderIdGid = payload.id; // This is already a GID
+        const numericDraftOrderId = draftOrderIdGid.split("/").pop();
+        const orderIdGid = payload.order_id; // This is also a GID
+        this.logger.log(
+          `Draft order ${draftOrderIdGid} was completed. Associated order: ${orderIdGid}`,
+        );
+        this.eventsGateway.emitOrderStatusUpdate(numericDraftOrderId, {
+          draftOrderId: draftOrderIdGid,
+          orderId: orderIdGid,
+          status: "completed",
+        });
+      }
     }
 
-    return { message: "Webhook received" };
+    return { status: "ok" };
   }
 }
