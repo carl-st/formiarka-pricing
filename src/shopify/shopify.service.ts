@@ -241,10 +241,6 @@ export class ShopifyService {
           draftOrder(id: $id) {
             id
             status
-            order {
-              id
-              financialStatus
-            }
           }
         }`,
         {

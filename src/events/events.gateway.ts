@@ -18,7 +18,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private readonly logger = new Logger(EventsGateway.name);
-  private clients: Map<string, Socket> = new Map();
 
   handleConnection(client: Socket, ...args: any[]) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -26,30 +25,25 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
-    // Clean up the clients map
-    for (const [key, value] of this.clients.entries()) {
-      if (value === client) {
-        this.clients.delete(key);
-        break;
-      }
-    }
   }
 
   @SubscribeMessage("subscribeToOrder")
   handleSubscribeToOrder(client: Socket, draftOrderId: string): void {
     this.logger.log(`Client ${client.id} subscribing to order ${draftOrderId}`);
-    this.clients.set(draftOrderId, client);
+    client.join(draftOrderId);
   }
 
   emitOrderStatusUpdate(draftOrderId: string, status: any) {
-    const client = this.clients.get(draftOrderId);
-    if (client) {
+    const orderId = draftOrderId.toString();
+    const room = this.server.sockets.adapter.rooms.get(orderId);
+    this.logger.log(`Emitting to room: ${orderId}`);
+    if (room && room.size > 0) {
       this.logger.log(
-        `Emitting order status update for ${draftOrderId} to client ${client.id}`,
+        `Emitting order status update for ${orderId} to ${room.size} client(s).`,
       );
-      client.emit("orderStatusUpdate", status);
+      this.server.to(orderId).emit("orderStatusUpdate", status);
     } else {
-      this.logger.warn(`No client subscribed to order ${draftOrderId}`);
+      this.logger.warn(`No client subscribed to order ${orderId}`);
     }
   }
 }
