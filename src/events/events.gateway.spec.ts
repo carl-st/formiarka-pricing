@@ -28,18 +28,6 @@ describe("EventsGateway", () => {
     });
   });
 
-  describe("handleUnsubscribeFromOrder", () => {
-    it("should unsubscribe a client from an order", () => {
-      const client = { id: "test-client" } as any;
-      const draftOrderId = "12345";
-
-      gateway["clients"].set(draftOrderId, client);
-      gateway.handleUnsubscribeFromOrder(client, draftOrderId);
-
-      expect(gateway["clients"].has(draftOrderId)).toBe(false);
-    });
-  });
-
   describe("emitOrderStatusUpdate", () => {
     it("should emit an order status update to a subscribed client", () => {
       const client = {

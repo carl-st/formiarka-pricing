@@ -53,6 +53,7 @@ describe("PricingService", () => {
   describe("priceFromStl", () => {
     const stlPath = "/path/to/model.stl";
     const options: PriceRequestDto = {
+      originalFilename: "model.stl",
       quality: Quality.STANDARD,
       infill: Infill.STANDARD,
     };
