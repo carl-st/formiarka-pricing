@@ -21,6 +21,41 @@ export class PricingController {
   private readonly logger = new Logger(PricingController.name);
   constructor(private readonly pricing: PricingService) {}
 
+  @Post("stl")
+  @ApiOperation({ summary: "Calculate price from an STL file URL" })
+  @ApiBody({
+    description: "STL file URL and pricing options",
+    schema: {
+      type: "object",
+      required: ["fileUrl", "quality", "infill", "originalFilename"],
+      properties: {
+        fileUrl: {
+          type: "string",
+          description: "URL of the STL file to download",
+        },
+        options: {
+          type: "object",
+          description: "Pricing options for the STL file",
+          properties: {
+            quality: {
+              type: "string",
+              enum: ["standard", "medium", "premium"],
+              description: "Print quality level",
+            },
+            infill: {
+              type: "string",
+              enum: ["standard", "medium", "premium"],
+              description: "Infill percentage level",
+            },
+            originalFilename: {
+              type: "string",
+              description: "Original filename of the STL file",
+            },
+          },
+        },
+      },
+    },
+  })
   /**
    * Downloads an STL file from a remote URL, saves it to the temp directory,
    * and calculates the price.
@@ -29,10 +64,15 @@ export class PricingController {
    * @returns Price breakdown
    * @throws BadRequestException if download fails or content type is invalid
    */
-  private async downloadAndPrice(
-    fileUrl: string,
-    options: PriceRequestDto,
-  ): Promise<any> {
+  async downloadAndPrice(
+    @Body() body: { fileUrl: string; options: PriceRequestDto },
+  ) {
+    const { fileUrl, options } = body;
+    this.logger.log(
+      `Received request to price STL from URL: ${fileUrl} with options: ${JSON.stringify(
+        options,
+      )}`,
+    );
     // Validate URL
     let url: URL;
     try {
@@ -72,65 +112,12 @@ export class PricingController {
 
     this.logger.log(
       `Downloaded ${options.originalFilename} to ${tempFilename} with options: ${JSON.stringify(
-        {
-          quality: options.quality,
-          infill: options.infill,
-        },
+        options,
       )}`,
     );
 
     // Calculate price using the downloaded file
     return await this.pricing.priceFromStl(tempFilename, options);
-  }
-
-  @Post("stl")
-  @ApiOperation({ summary: "Calculate price from an STL file URL" })
-  @ApiBody({
-    description: "STL file URL and pricing options",
-    schema: {
-      type: "object",
-      required: ["fileUrl", "quality", "infill", "originalFilename"],
-      properties: {
-        fileUrl: {
-          type: "string",
-          description: "URL of the STL file to download",
-        },
-        quality: {
-          type: "string",
-          description: "Print quality",
-        },
-        infill: {
-          type: "number",
-          description: "Infill percentage",
-        },
-        originalFilename: {
-          type: "string",
-          description: "Original filename of the STL file",
-        },
-      },
-    },
-  })
-  async priceFromStl(@Body() body: { fileUrl: string } & PriceRequestDto) {
-    if (!body.fileUrl) {
-      throw new BadRequestException("fileUrl is required");
-    }
-    if (!body.quality || !body.infill || !body.originalFilename) {
-      throw new BadRequestException(
-        "Missing one or more of required parameters: quality, infill, and originalFilename.",
-      );
-    }
-
-    try {
-      return await this.pricing.priceFromStl(body.fileUrl, body);
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      this.logger.error(`Error processing STL file: ${error}`);
-      throw new BadRequestException(
-        `Failed to process file: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
   }
 
   @Post("recalculate/:tempFilename")

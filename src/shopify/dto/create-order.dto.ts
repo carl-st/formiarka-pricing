@@ -179,11 +179,11 @@ class CustomerDto implements Partial<Customer> {
 
 export class CreateOrderDto {
   @ApiProperty({
-    description: "The url of the STL file uploaded to blob storage.",
+    description: "The name of the temp STL file kept in BE data.",
     example: "upload-1758657443441-270817965.stl",
   })
   @IsString()
-  uploadedFileUrl: string;
+  tempFilename: string;
 
   @ApiProperty({ description: "The pricing options for the print." })
   @ValidateNested()

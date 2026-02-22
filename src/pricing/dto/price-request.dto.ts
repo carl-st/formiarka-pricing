@@ -34,5 +34,5 @@ export class PriceRequestDto {
     type: String,
     description: "The original filename for the print.",
   })
-  originalFilename: string;
+  originalFilename: string; // Todo: is it really needed?
 }

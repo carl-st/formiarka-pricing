@@ -11,15 +11,18 @@ post {
 }
 
 params:path {
-  tempFilename: upload-1760036002471-782277069.stl
+  tempFilename: upload-1771788668309-474732105.stl
 }
 
 body:json {
-  "quality": "standard",
-  "infill": "standard",
-  "originalFilename": "test.stl"
+  {
+    "quality": "standard",
+    "infill": "standard",
+    "originalFilename": "test.stl"
+  }
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }
