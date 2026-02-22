@@ -5,21 +5,19 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/pricing/recalculate/:filename
+  url: {{baseUrl}}/pricing/recalculate/:tempFilename
   body: json
   auth: inherit
 }
 
 params:path {
-  filename: upload-1760036002471-782277069.stl
+  tempFilename: upload-1760036002471-782277069.stl
 }
 
 body:json {
-  {
-    "quality": "standard",
-    "infill": "standard",
-    "originalFilename": "test.stl"
-  }
+  "quality": "standard",
+  "infill": "standard",
+  "originalFilename": "test.stl"
 }
 
 settings {

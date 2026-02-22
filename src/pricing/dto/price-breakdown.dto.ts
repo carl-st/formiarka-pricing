@@ -58,7 +58,7 @@ export interface Customer {
   dimensions: { width: number; height: number; depth: number };
   shippingCost: number;
   totalCost: number;
-  file: File | null;
+  uploadedFileUrl: string;
   error: string | null;
 }
 

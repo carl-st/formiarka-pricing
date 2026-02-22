@@ -1,8 +1,6 @@
 import {
   Controller,
   Post,
-  UploadedFile,
-  UseInterceptors,
   BadRequestException,
   Body,
   Logger,
@@ -10,11 +8,10 @@ import {
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
-import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { diskStorage } from "multer";
-import { extname, join } from "path";
-import { promises as fs } from "fs";
+import { ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
+import { Readable } from "stream";
 import { PricingService } from "./pricing.service";
 import { PriceRequestDto } from "./dto/price-request.dto";
 
@@ -24,63 +21,115 @@ export class PricingController {
   private readonly logger = new Logger(PricingController.name);
   constructor(private readonly pricing: PricingService) {}
 
-  @Post("stl")
-  @ApiOperation({ summary: "Calculate price from an STL file" })
-  @ApiConsumes("multipart/form-data")
-  @ApiBody({
-    description: "STL file and pricing options",
-    type: PriceRequestDto,
-  })
-  @UseInterceptors(
-    FileInterceptor("file", {
-      storage: diskStorage({
-        destination: async (req, file, cb) => {
-          const tmpDir = process.env.TMP_DIR || "/tmp";
-          cb(null, tmpDir);
-        },
-        filename: (req, file, cb) => {
-          const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-          cb(null, `upload-${unique}${extname(file.originalname)}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.toLowerCase().endsWith(".stl")) {
-          return cb(
-            new BadRequestException("Only .stl files are allowed"),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB
-      },
-    }),
-  )
-  async priceFromStl(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() options: PriceRequestDto,
-  ) {
+  /**
+   * Downloads an STL file from a remote URL, saves it to the temp directory,
+   * and calculates the price.
+   * @param fileUrl URL of the file to download
+   * @param options Pricing options
+   * @returns Price breakdown
+   * @throws BadRequestException if download fails or content type is invalid
+   */
+  private async downloadAndPrice(
+    fileUrl: string,
+    options: PriceRequestDto,
+  ): Promise<any> {
+    // Validate URL
+    let url: URL;
+    try {
+      url = new URL(fileUrl);
+    } catch {
+      throw new BadRequestException("Invalid fileUrl provided");
+    }
+
+    if (!url.protocol.startsWith("http")) {
+      throw new BadRequestException("fileUrl must be an HTTP or HTTPS URL");
+    }
+
+    // Download file from URL
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw new BadRequestException(
+        `Failed to download file: HTTP ${response.status}`,
+      );
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (
+      !contentType?.includes("application/sla") &&
+      !contentType?.includes("model")
+    ) {
+      this.logger.warn(`Unexpected content type for STL file: ${contentType}`);
+    }
+
+    const tmpDir = process.env.TMP_DIR || "/tmp";
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const tempFilename = `upload-${unique}.stl`;
+    const tempPath = `${tmpDir}/${tempFilename}`;
+
+    // Stream the file to disk
+    const fileStream = createWriteStream(tempPath);
+    await pipeline(Readable.from(response.body as any), fileStream);
+
     this.logger.log(
-      `Pricing ${file.originalname} with options: ${JSON.stringify(options)}`,
+      `Downloaded ${options.originalFilename} to ${tempFilename} with options: ${JSON.stringify(
+        {
+          quality: options.quality,
+          infill: options.infill,
+        },
+      )}`,
     );
 
-    if (!file) throw new BadRequestException("No file provided");
-    if (!options.quality || !options.infill || !options.originalFilename) {
+    // Calculate price using the downloaded file
+    return await this.pricing.priceFromStl(tempFilename, options);
+  }
+
+  @Post("stl")
+  @ApiOperation({ summary: "Calculate price from an STL file URL" })
+  @ApiBody({
+    description: "STL file URL and pricing options",
+    schema: {
+      type: "object",
+      required: ["fileUrl", "quality", "infill", "originalFilename"],
+      properties: {
+        fileUrl: {
+          type: "string",
+          description: "URL of the STL file to download",
+        },
+        quality: {
+          type: "string",
+          description: "Print quality",
+        },
+        infill: {
+          type: "number",
+          description: "Infill percentage",
+        },
+        originalFilename: {
+          type: "string",
+          description: "Original filename of the STL file",
+        },
+      },
+    },
+  })
+  async priceFromStl(@Body() body: { fileUrl: string } & PriceRequestDto) {
+    if (!body.fileUrl) {
+      throw new BadRequestException("fileUrl is required");
+    }
+    if (!body.quality || !body.infill || !body.originalFilename) {
       throw new BadRequestException(
-        "Missing required parameters: quality, infill, and originalFilename.",
+        "Missing one or more of required parameters: quality, infill, and originalFilename.",
       );
     }
 
     try {
-      return await this.pricing.priceFromStl(file.filename, options);
-    } finally {
-      // The file is no longer deleted, so it can be used for recalculation.
-      // try {
-      //   await fs.unlink(stlPath);
-      // } catch {
-      //   // ignore
-      // }
+      return await this.pricing.priceFromStl(body.fileUrl, body);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(`Error processing STL file: ${error}`);
+      throw new BadRequestException(
+        `Failed to process file: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -100,6 +149,12 @@ export class PricingController {
     if (!options.quality || !options.infill) {
       throw new BadRequestException(
         "Missing required parameters: quality and infill.",
+      );
+    }
+
+    if (!options.originalFilename) {
+      throw new BadRequestException(
+        "Missing required parameters: originalFilename.",
       );
     }
 

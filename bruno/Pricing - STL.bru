@@ -6,19 +6,15 @@ meta {
 
 post {
   url: {{baseUrl}}/pricing/stl
-  body: multipartForm
+  body: json
   auth: inherit
 }
 
-headers {
-  Content-Type: multipart/form-data
-}
-
-body:multipart-form {
-  file: @file(/Users/Karol/Library/Mobile Documents/com~apple~CloudDocs/Kostka_1cm3(1).stl)
-  quality: premium
-  infill: premium
-  originalFilename: Kostka_1cm3.stl
+body:json {
+  "fileUrl": "https://example.com/your-stl-file.stl",
+  "quality": "premium",
+  "infill": 100,
+  "originalFilename": "Kostka_1cm3.stl"
 }
 
 settings {
