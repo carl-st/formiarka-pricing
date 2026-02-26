@@ -32,13 +32,13 @@ export class ShopifyController {
   async createOrder(@Body() createOrderDto: CreateOrderDto) {
     this.logger.log(
       `Creating Shopify draft order for file: ${
-        createOrderDto.tempFilename
+        createOrderDto.uploadedFileUrl
       } with options: ${JSON.stringify(createOrderDto.options)}`,
     );
 
-    const { tempFilename, options, customer } = createOrderDto;
+    const { tempFilename, uploadedFileUrl, options, customer } = createOrderDto;
 
-    if (!tempFilename || !options || !options.quality || !options.infill) {
+    if (!uploadedFileUrl || !options || !options.quality || !options.infill) {
       throw new BadRequestException(
         "Missing required parameters: tempFilename, quality, and infill.",
       );
