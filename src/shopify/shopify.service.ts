@@ -107,7 +107,7 @@ export class ShopifyService {
     const draftOrderInput: any = {
       lineItems: [
         {
-          title: `3D Print - ${customer.firstName} ${customer.lastName} ${priceBreakdown.originalFilename}`,
+          title: `3D Print - ${customer.firstName} ${customer.lastName}: ${priceBreakdown.originalFilename}`,
           originalUnitPrice: priceBreakdown.totalPrintCost.toFixed(2),
           quantity: 1,
           customAttributes: customAttributes,

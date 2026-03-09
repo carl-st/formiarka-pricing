@@ -100,10 +100,10 @@ export class ShopifyController {
     const body = (req as any).rawBody || req.body;
     const isValid = await this.shopifyService.verifyWebhook(hmac, body);
 
-    // if (!isValid) {
-    //   this.logger.warn(`Invalid HMAC for Shopify webhook on topic ${topic}.`);
-    //   throw new BadRequestException("Invalid HMAC signature.");
-    // }
+    if (!isValid) {
+      this.logger.warn(`Invalid HMAC for Shopify webhook on topic ${topic}.`);
+      throw new BadRequestException("Invalid HMAC signature.");
+    }
 
     this.logger.log(`Valid Shopify webhook received for topic: ${topic}`);
 
