@@ -50,6 +50,7 @@ export class ShopifyController {
     );
 
     const shopifyOrder = await this.shopifyService.createOrder(
+      uploadedFileUrl,
       priceBreakdown,
       customer,
       options,

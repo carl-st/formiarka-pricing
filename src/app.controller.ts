@@ -9,7 +9,6 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    console.log("Hot reloading is working!");
-    return this.appService.getHello();
+    return this.appService.getOK();
   }
 }

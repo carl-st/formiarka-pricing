@@ -8,6 +8,7 @@ export interface GcodeStats {
 export interface PriceBreakdown {
   originalFilename?: string;
   tempFilename?: string;
+  uploadedFileUrl?: string;
   currency: string;
 
   // Inputs

@@ -38,6 +38,7 @@ export class ShopifyService {
   }
 
   async createOrder(
+    uploadedFileUrl: string,
     priceBreakdown: PriceBreakdown,
     customer: Partial<Customer>,
     options: PriceRequestDto,
@@ -59,26 +60,34 @@ export class ShopifyService {
       }
     };
 
-    addAttribute("Material", `${priceBreakdown.filamentG.toFixed(2)}g`);
-    addAttribute(
-      "Print Time",
-      `${(priceBreakdown.printTimeSeconds / 3600).toFixed(2)} hours`,
-    );
-    addAttribute("Original STL Filename", priceBreakdown.originalFilename);
-    addAttribute("Temporary STL Filename", priceBreakdown.tempFilename);
-    addAttribute(
-      "Material Cost",
-      `${priceBreakdown.materialCost.toFixed(2)} PLN`,
-    );
-    addAttribute("Energy Cost", `${priceBreakdown.energyCost.toFixed(2)} PLN`);
-    addAttribute(
-      "Maintenance Cost",
-      `${priceBreakdown.maintenanceCost.toFixed(2)} PLN`,
-    );
-    addAttribute(
-      "Markup",
-      `${priceBreakdown.markupAmount.toFixed(2)} PLN (${priceBreakdown.markupPct}%)`,
-    );
+    if (uploadedFileUrl) {
+      addAttribute("Uploaded STL File URL", uploadedFileUrl);
+    }
+
+    if (priceBreakdown) {
+      addAttribute("Material", `${priceBreakdown.filamentG.toFixed(2)}g`);
+      addAttribute(
+        "Print Time",
+        `${(priceBreakdown.printTimeSeconds / 3600).toFixed(2)} hours`,
+      );
+      addAttribute("Original STL File Name", priceBreakdown.originalFilename);
+      addAttribute(
+        "Material Cost",
+        `${priceBreakdown.materialCost.toFixed(2)} PLN`,
+      );
+      addAttribute(
+        "Energy Cost",
+        `${priceBreakdown.energyCost.toFixed(2)} PLN`,
+      );
+      addAttribute(
+        "Maintenance Cost",
+        `${priceBreakdown.maintenanceCost.toFixed(2)} PLN`,
+      );
+      addAttribute(
+        "Markup",
+        `${priceBreakdown.markupAmount.toFixed(2)} PLN (${priceBreakdown.markupPct}%)`,
+      );
+    }
 
     if (options) {
       addAttribute("Quality", options.quality);
@@ -98,7 +107,7 @@ export class ShopifyService {
     const draftOrderInput: any = {
       lineItems: [
         {
-          title: `3D Print - ${priceBreakdown.originalFilename}`,
+          title: `3D Print - ${customer.firstName} ${customer.lastName} ${priceBreakdown.originalFilename}`,
           originalUnitPrice: priceBreakdown.totalPrintCost.toFixed(2),
           quantity: 1,
           customAttributes: customAttributes,
