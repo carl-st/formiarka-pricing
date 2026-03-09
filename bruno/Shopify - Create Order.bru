@@ -1,0 +1,48 @@
+meta {
+  name: Shopify - Create Order
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/shopify/draft-orders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "tempFilename": "upload-1772740290101-405502233.stl",
+    "uploadedFileUrl": "https://vn0op8mn4lsbtljo.public.blob.vercel-storage.com/witcher-S0qVU5hyfjVhbKJo0dIec3JijemidS.stl",
+    "options": {
+      "quality": "standard",
+      "infill": "standard",
+      "originalFilename": "test.stl"
+    },
+    "customer": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "phone": "123456789",
+      "company": "ACME Inc.",
+      "address1": "123 Main St",
+      "address2": "Apt 4B",
+      "city": "Anytown",
+      "zip": "12345",
+      "countryCode": "US",
+      "notes": "This is a test order.",
+      "filamentType": "PLA",
+      "color": "Black",
+      "amount": 1,
+      "delivery": "pickup",
+      "payment": "cash",
+      "invoice": true,
+      "terms": true
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

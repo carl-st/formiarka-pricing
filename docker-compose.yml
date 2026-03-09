@@ -1,29 +1,19 @@
-version: "3.9"
 services:
   pricing:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: print-pricing
     ports:
       - "3001:3001"
+    env_file:
+      - .env
     environment:
-      - PORT=3001
-      - CURRENCY=PLN
-      - FILAMENT_COST_PER_KG=100
-      - ENERGY_COST_PER_KWH=1.5
-      - PRINTER_POWER_W=200
-      - HOURLY_RATE=20
-      - MAINTENANCE_RATE_PER_HOUR=5
-      - MARKUP_PCT=50
-      - MIN_JOB_FEE=0
-      - PRUSA_CONFIG_BUNDLE=/configs/printer.ini
-      - TMP_DIR=/tmp
+      - CHOKIDAR_USEPOLLING=1
     volumes:
-      - tmpdata:/tmp
-      - ./configs:/configs:ro # if using custom profiles
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
+      - .:/app
+      - node_modules:/app/node_modules
+
 volumes:
   tmpdata:
+  node_modules:

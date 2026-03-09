@@ -73,22 +73,22 @@ describe("CleanupService", () => {
       await service.handleCron();
 
       expect(logger.log).toHaveBeenCalledWith(
-        "Running scheduled cleanup of temporary files..."
+        "Running scheduled cleanup of temporary files...",
       );
       expect(mockFsReaddir).toHaveBeenCalledWith("/tmp/test-cleanup");
       expect(mockFsStat).toHaveBeenCalledTimes(2); // oldFile and newFile
       expect(mockFsUnlink).toHaveBeenCalledTimes(1);
       expect(mockFsUnlink).toHaveBeenCalledWith(
-        expect.stringContaining(oldFile)
+        expect.stringContaining(oldFile),
       );
       expect(logger.log).toHaveBeenCalledWith(
-        `Deleted old temporary file: /tmp/test-cleanup/${oldFile}`
+        `Deleted old temporary file: /tmp/test-cleanup/${oldFile}`,
       );
       expect(mockFsUnlink).not.toHaveBeenCalledWith(
-        expect.stringContaining(newFile)
+        expect.stringContaining(newFile),
       );
       expect(mockFsUnlink).not.toHaveBeenCalledWith(
-        expect.stringContaining(ignoredFile)
+        expect.stringContaining(ignoredFile),
       );
     });
 
@@ -100,10 +100,10 @@ describe("CleanupService", () => {
       await service.handleCron();
 
       expect(logger.log).toHaveBeenCalledWith(
-        "Running scheduled cleanup of temporary files..."
+        "Running scheduled cleanup of temporary files...",
       );
       expect(logger.log).toHaveBeenCalledWith(
-        "Temporary directory /tmp/test-cleanup not found, skipping cleanup."
+        "Temporary directory /tmp/test-cleanup not found, skipping cleanup.",
       );
       expect(logger.error).not.toHaveBeenCalled();
     });
@@ -115,10 +115,10 @@ describe("CleanupService", () => {
       await service.handleCron();
 
       expect(logger.log).toHaveBeenCalledWith(
-        "Running scheduled cleanup of temporary files..."
+        "Running scheduled cleanup of temporary files...",
       );
       expect(logger.error).toHaveBeenCalledWith(
-        "Failed to read temporary directory /tmp/test-cleanup: Permission denied"
+        "Failed to read temporary directory /tmp/test-cleanup: Permission denied",
       );
     });
 
@@ -132,7 +132,7 @@ describe("CleanupService", () => {
       await service.handleCron();
 
       expect(logger.error).toHaveBeenCalledWith(
-        "Failed to process file /tmp/test-cleanup/slice-file1.gcode: Stat failed"
+        "Failed to process file /tmp/test-cleanup/slice-file1.gcode: Stat failed",
       );
       expect(mockFsUnlink).not.toHaveBeenCalled();
     });

@@ -49,4 +49,29 @@ export class ConfigService {
   get tempDir(): string {
     return process.env.TMP_DIR || "/tmp";
   }
+
+  get shopifyShopName(): string {
+    if (!process.env.SHOPIFY_SHOP_NAME) {
+      throw new Error("SHOPIFY_SHOP_NAME is not defined in .env");
+    }
+    return process.env.SHOPIFY_SHOP_NAME;
+  }
+
+  get shopifyAdminApiToken(): string {
+    if (!process.env.SHOPIFY_ADMIN_API_TOKEN) {
+      throw new Error("SHOPIFY_ADMIN_API_TOKEN is not defined in .env");
+    }
+    return process.env.SHOPIFY_ADMIN_API_TOKEN;
+  }
+
+  get shopifyApiVersion(): string {
+    return process.env.SHOPIFY_API_VERSION || "2025-07";
+  }
+
+  get shopifySharedSecret(): string {
+    if (!process.env.SHOPIFY_SHARED_SECRET) {
+      throw new Error("SHOPIFY_SHARED_SECRET is not defined in .env");
+    }
+    return process.env.SHOPIFY_SHARED_SECRET;
+  }
 }

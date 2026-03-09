@@ -6,6 +6,9 @@ export interface GcodeStats {
 }
 
 export interface PriceBreakdown {
+  originalFilename?: string;
+  tempFilename?: string;
+  uploadedFileUrl?: string;
   currency: string;
 
   // Inputs
@@ -31,3 +34,33 @@ export interface PriceBreakdown {
   totalBeforeMin: number;
   totalPrintCost: number;
 }
+
+export interface Customer {
+  quality: string;
+  filamentType: string;
+  infill: string;
+  color: string;
+  amount: number;
+  delivery: string;
+  notes: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  company?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  zip?: string;
+  countryCode?: string;
+  invoice: boolean;
+  payment: string;
+  terms: boolean;
+  dimensions: { width: number; height: number; depth: number };
+  shippingCost: number;
+  totalCost: number;
+  uploadedFileUrl: string;
+  error: string | null;
+}
+
+export type Order = Customer & PriceBreakdown;

@@ -1,4 +1,5 @@
-import { IsEnum, IsOptional } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsEnum } from "class-validator";
 
 export enum Quality {
   STANDARD = "standard",
@@ -13,11 +14,25 @@ export enum Infill {
 }
 
 export class PriceRequestDto {
+  @ApiProperty({
+    enum: Quality,
+    default: Quality.MEDIUM,
+    description: "The quality of the print.",
+  })
   @IsEnum(Quality)
-  @IsOptional()
   quality: Quality = Quality.MEDIUM;
 
+  @ApiProperty({
+    enum: Infill,
+    default: Infill.MEDIUM,
+    description: "The infill percentage for the print.",
+  })
   @IsEnum(Infill)
-  @IsOptional()
   infill: Infill = Infill.MEDIUM;
+
+  @ApiProperty({
+    type: String,
+    description: "The original filename for the print.",
+  })
+  originalFilename: string; // Todo: is it really needed?
 }

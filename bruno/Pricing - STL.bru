@@ -1,0 +1,27 @@
+meta {
+  name: Pricing - STL
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/pricing/stl
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "fileUrl": "https://vn0op8mn4lsbtljo.public.blob.vercel-storage.com/witcher-S0qVU5hyfjVhbKJo0dIec3JijemidS.stl",
+    "options": {
+      "quality": "premium",
+      "infill": "medium",
+      "originalFilename": "Kostka_1cm3.stl"
+    }
+  }
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Pricing - Recalculate
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/pricing/recalculate/:tempFilename
+  body: json
+  auth: inherit
+}
+
+params:path {
+  tempFilename: upload-1771788668309-474732105.stl
+}
+
+body:json {
+  {
+    "quality": "standard",
+    "infill": "standard",
+    "originalFilename": "test.stl"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -53,6 +53,7 @@ describe("PricingService", () => {
   describe("priceFromStl", () => {
     const stlPath = "/path/to/model.stl";
     const options: PriceRequestDto = {
+      originalFilename: "model.stl",
       quality: Quality.STANDARD,
       infill: Infill.STANDARD,
     };
@@ -93,7 +94,7 @@ describe("PricingService", () => {
           expect.stringMatching(/slice-\d+\.gcode$/),
           stlPath,
         ]),
-        { stdio: ["ignore", "pipe", "pipe"] }
+        { stdio: ["ignore", "pipe", "pipe"] },
       );
 
       expect(mockFsReadFile).toHaveBeenCalledWith(expect.any(String), "utf8");
@@ -141,14 +142,14 @@ describe("PricingService", () => {
       mockSpawn.mockReturnValue(spawnEmitter);
 
       await expect(service.priceFromStl(stlPath, options)).rejects.toThrow(
-        "PrusaSlicer failed (1): slicer error"
+        "PrusaSlicer failed (1): slicer error",
       );
     });
 
     it("should throw an error if G-code parsing fails", async () => {
       mockFsReadFile.mockResolvedValue("; no stats here");
       await expect(service.priceFromStl(stlPath, options)).rejects.toThrow(
-        "Failed to parse necessary stats from G-code"
+        "Failed to parse necessary stats from G-code",
       );
     });
   });
