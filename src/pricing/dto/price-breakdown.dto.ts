@@ -5,6 +5,24 @@ export interface GcodeStats {
   printTimeSeconds?: number; // total estimated time in seconds
 }
 
+export interface InPostAddress {
+  line1: string;
+  line2?: string;
+  city: string;
+  postCode: string;
+  countryCode: string;
+}
+
+export interface InPostPoint {
+  name: string;
+  type: "parcel_locker" | "pop";
+  address: InPostAddress;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 export interface PriceBreakdown {
   originalFilename?: string;
   tempFilename?: string;
@@ -60,6 +78,7 @@ export interface Customer {
   shippingCost: number;
   totalCost: number;
   uploadedFileUrl: string;
+  lockerData?: InPostPoint;
   error: string | null;
 }
 
