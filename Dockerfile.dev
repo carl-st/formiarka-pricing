@@ -13,16 +13,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libpango-1.0-0 \
     libharfbuzz0b libfontconfig1 libfreetype6 libx11-xcb1 libxcb1 libxcursor1 \
     libxi6 libxrandr2 libxss1 libxcomposite1 libxdamage1 libxfixes3 \
+    tar bzip2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PrusaSlicer via AppImage (headless)
+# Install PrusaSlicer via tar.bz2 (ARM64 compatible)
 ENV PRUSASLICER_VERSION=2.7.4
-ENV PRUSASLICER_GITHUB_VERSION="2.7.4+linux-x64-GTK3-202404050928"
+ENV PRUSASLICER_GITHUB_VERSION="2.7.4+linux-arm64-GTK3-202404050952"
 WORKDIR /opt
-RUN curl -L -o PrusaSlicer.AppImage https://github.com/prusa3d/PrusaSlicer/releases/download/version_${PRUSASLICER_VERSION}/PrusaSlicer-${PRUSASLICER_GITHUB_VERSION}.AppImage \
-    && chmod +x PrusaSlicer.AppImage \
-    && ./PrusaSlicer.AppImage --appimage-extract \
-    && ln -s /opt/squashfs-root/usr/bin/prusa-slicer /usr/local/bin/prusa-slicer
+RUN curl -L -o PrusaSlicer.tar.bz2 https://github.com/prusa3d/PrusaSlicer/releases/download/version_${PRUSASLICER_VERSION}/PrusaSlicer-${PRUSASLICER_GITHUB_VERSION}.tar.bz2 \
+    && tar -xjf PrusaSlicer.tar.bz2 \
+    && mv PrusaSlicer-${PRUSASLICER_GITHUB_VERSION} /opt/prusa-slicer \
+    && ln -s /opt/prusa-slicer/prusa-slicer /usr/local/bin/prusa-slicer \
+    && rm PrusaSlicer.tar.bz2
 
 # Set environment variables for headless OpenGL
 ENV LIBGL_ALWAYS_SOFTWARE=1
