@@ -1,18 +1,27 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { CleanupService } from "./cleanup.service";
 import { ConfigService } from "../config/config.service";
-import { CronExpression } from "@nestjs/schedule";
 import * as fs from "fs/promises";
 import { Logger } from "@nestjs/common";
 
 jest.mock("fs/promises");
-jest.mock("@nestjs/common", () => ({
-  ...jest.requireActual("@nestjs/common"),
-  Logger: jest.fn(() => ({
+
+// Mock @nestjs/common with proper static methods
+jest.mock("@nestjs/common", () => {
+  const actual = jest.requireActual("@nestjs/common");
+
+  // Create a mock Logger class with static overrideLogger
+  const MockLogger = jest.fn().mockImplementation(() => ({
     log: jest.fn(),
     error: jest.fn(),
-  })),
-}));
+  }));
+  MockLogger.overrideLogger = jest.fn();
+
+  return {
+    ...actual,
+    Logger: MockLogger,
+  };
+});
 
 const mockFsReaddir = fs.readdir as jest.Mock;
 const mockFsStat = fs.stat as jest.Mock;

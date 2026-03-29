@@ -171,7 +171,7 @@ export class ShopifyService {
     customAttributes: CustomAttribute[],
   ): DraftOrderInput {
     if (!customer) {
-      throw new Error("Invalid delivery method");
+      throw new Error("Customer data is required.");
     }
 
     const draftOrderInput: DraftOrderInput = {
