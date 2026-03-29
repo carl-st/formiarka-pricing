@@ -7,6 +7,44 @@ import { createAdminApiClient } from "@shopify/admin-api-client";
 import type { AdminApiClient } from "@shopify/admin-api-client";
 import { ApiVersion } from "@shopify/shopify-api";
 
+interface DraftOrderInput {
+  lineItems: Array<{
+    title: string;
+    originalUnitPrice: string;
+    quantity: number;
+    customAttributes?: Array<{ key: string; value: string }>;
+    requiresShipping?: boolean;
+  }>;
+  email?: string;
+  note?: string;
+  billingAddress?: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    zip?: string;
+    countryCode?: string;
+    company?: string;
+  };
+  shippingLine?: {
+    title: string;
+    price: string;
+  };
+  shippingAddress?: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    zip?: string;
+    countryCode?: string;
+    company?: string;
+  };
+}
+
 @Injectable()
 export class ShopifyService {
   private readonly logger = new Logger(ShopifyService.name);
@@ -120,7 +158,7 @@ export class ShopifyService {
       }
     }
 
-    const draftOrderInput: any = {
+    const draftOrderInput: DraftOrderInput = {
       lineItems: [
         {
           title: `3D Print - ${customer.firstName} ${customer.lastName}: ${priceBreakdown.originalFilename}`,
@@ -130,30 +168,11 @@ export class ShopifyService {
           requiresShipping: true,
         },
       ],
-      shippingLine: {
-        shippingRateHandle: "inpost_paczkomat",
-        title: "InPost Paczkomat",
-        priceWithCurrency: {
-          amount: "16.99",
-          currencyCode: "PLN",
-        },
-      },
     };
 
     if (customer) {
       draftOrderInput.email = customer.email;
       draftOrderInput.note = customer.notes;
-      draftOrderInput.shippingAddress = {
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        phone: customer.phone,
-        address1: customer.address1,
-        address2: customer.address2,
-        city: customer.city,
-        zip: customer.zip,
-        countryCode: customer.countryCode,
-        company: customer.company,
-      };
       draftOrderInput.billingAddress = {
         firstName: customer.firstName,
         lastName: customer.lastName,
@@ -165,6 +184,26 @@ export class ShopifyService {
         countryCode: customer.countryCode,
         company: customer.company,
       };
+
+      if (customer.delivery === "InPost Paczkomat" && customer.lockerData) {
+        draftOrderInput.shippingLine = {
+          title: `InPost Paczkomat ${customer.lockerData?.name}`,
+          price: customer.shippingCost?.toString() || "0",
+        };
+        draftOrderInput.shippingAddress = {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: customer.phone,
+          address1: customer.address1,
+          address2: customer.address2,
+          city: customer.city,
+          zip: customer.zip,
+          countryCode: customer.countryCode,
+          company: customer.company,
+        };
+      }
+    } else {
+      throw new Error("Invalid delivery method");
     }
 
     try {
