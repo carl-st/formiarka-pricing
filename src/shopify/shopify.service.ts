@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import * as crypto from "crypto";
 import { ConfigService } from "../config/config.service";
 import { PriceBreakdown, Customer } from "./../pricing/dto/price-breakdown.dto";
@@ -65,12 +65,12 @@ export class ShopifyService {
     }
 
     if (priceBreakdown) {
+      addAttribute("Original STL File Name", priceBreakdown.originalFilename);
       addAttribute("Material", `${priceBreakdown.filamentG.toFixed(2)}g`);
       addAttribute(
         "Print Time",
         `${(priceBreakdown.printTimeSeconds / 3600).toFixed(2)} hours`,
       );
-      addAttribute("Original STL File Name", priceBreakdown.originalFilename);
       addAttribute(
         "Material Cost",
         `${priceBreakdown.materialCost.toFixed(2)} PLN`,
@@ -102,6 +102,22 @@ export class ShopifyService {
       addAttribute("Payment", customer.payment);
       addAttribute("Invoice Required", customer.invoice);
       addAttribute("Terms Accepted", customer.terms);
+      if (customer.lockerData) {
+        addAttribute("Locker Name", customer.lockerData.name);
+        addAttribute(
+          "Locker Address Line 1",
+          customer.lockerData.address.line1,
+        );
+        addAttribute(
+          "Locker Address Line 2",
+          customer.lockerData.address.line2,
+        );
+        addAttribute("Locker City", customer.lockerData.address.city);
+        addAttribute(
+          "Locker Postal Code",
+          customer.lockerData.address.countryCode,
+        );
+      }
     }
 
     const draftOrderInput: any = {
@@ -111,6 +127,7 @@ export class ShopifyService {
           originalUnitPrice: priceBreakdown.totalPrintCost.toFixed(2),
           quantity: 1,
           customAttributes: customAttributes,
+          requiresShipping: true,
         },
       ],
       shippingLine: {
