@@ -6,6 +6,15 @@ import { PriceRequestDto } from "./../pricing/dto/price-request.dto";
 import { createAdminApiClient } from "@shopify/admin-api-client";
 import type { AdminApiClient } from "@shopify/admin-api-client";
 import { ApiVersion } from "@shopify/shopify-api";
+import {
+  DraftOrderInput,
+  CustomAttribute,
+} from "./interfaces/draft-order.interface";
+import { addAttribute } from "./utils/attributes.util";
+import {
+  DRAFT_ORDER_CREATE_MUTATION,
+  DRAFT_ORDER_QUERY,
+} from "./graphql/queries";
 
 @Injectable()
 export class ShopifyService {
@@ -44,7 +53,7 @@ export class ShopifyService {
     options: PriceRequestDto,
   ): Promise<any> {
     this.logger.log(
-      `Creating Shopify draft order for ${priceBreakdown.originalFilename} for customer ${customer.email}`,
+      `Creating Shopify draft order for ${priceBreakdown.originalFilename} for customer ${customer?.email || "unknown"}`,
     );
 
     // Note on file uploads: Shopify's GraphQL API for Draft Orders doesn't directly
@@ -53,74 +62,119 @@ export class ShopifyService {
     // and then reference the returned file GID in a custom attribute on the line item.
     // For simplicity, we'll just add the filename as a property for now.
 
-    const customAttributes: { key: string; value: string }[] = [];
-    const addAttribute = (key: string, value: any) => {
-      if (value !== null && value !== undefined && value !== "") {
-        customAttributes.push({ key, value: String(value) });
-      }
-    };
+    const customAttributes: CustomAttribute[] = [];
 
+    this.addAttributesFromUploadedFile(uploadedFileUrl, customAttributes);
+    this.addAttributesFromPriceBreakdown(priceBreakdown, customAttributes);
+    this.addAttributesFromOptions(options, customAttributes);
+    this.addAttributesFromCustomer(customer, customAttributes);
+
+    const draftOrderInput = this.createDraftOrderInput(
+      customer,
+      priceBreakdown,
+      customAttributes,
+    );
+
+    return this.executeDraftOrderCreation(draftOrderInput);
+  }
+
+  private addAttributesFromUploadedFile(
+    uploadedFileUrl: string,
+    customAttributes: CustomAttribute[],
+  ): void {
     if (uploadedFileUrl) {
-      addAttribute("Uploaded STL File URL", uploadedFileUrl);
+      addAttribute(customAttributes, "Uploaded STL File URL", uploadedFileUrl);
     }
+  }
 
-    if (priceBreakdown) {
-      addAttribute("Original STL File Name", priceBreakdown.originalFilename);
-      addAttribute("Material", `${priceBreakdown.filamentG.toFixed(2)}g`);
-      addAttribute(
+  private addAttributesFromPriceBreakdown(
+    priceBreakdown: PriceBreakdown,
+    customAttributes: CustomAttribute[],
+  ): void {
+    if (!priceBreakdown) return;
+
+    const attributes = [
+      ["Original STL File Name", priceBreakdown.originalFilename],
+      ["Material", `${priceBreakdown.filamentG.toFixed(2)}g`],
+      [
         "Print Time",
         `${(priceBreakdown.printTimeSeconds / 3600).toFixed(2)} hours`,
-      );
-      addAttribute(
-        "Material Cost",
-        `${priceBreakdown.materialCost.toFixed(2)} PLN`,
-      );
-      addAttribute(
-        "Energy Cost",
-        `${priceBreakdown.energyCost.toFixed(2)} PLN`,
-      );
-      addAttribute(
-        "Maintenance Cost",
-        `${priceBreakdown.maintenanceCost.toFixed(2)} PLN`,
-      );
-      addAttribute(
+      ],
+      ["Material Cost", `${priceBreakdown.materialCost.toFixed(2)} PLN`],
+      ["Energy Cost", `${priceBreakdown.energyCost.toFixed(2)} PLN`],
+      ["Maintenance Cost", `${priceBreakdown.maintenanceCost.toFixed(2)} PLN`],
+      [
         "Markup",
         `${priceBreakdown.markupAmount.toFixed(2)} PLN (${priceBreakdown.markupPct}%)`,
+      ],
+    ];
+
+    attributes.forEach(([key, value]) =>
+      addAttribute(customAttributes, key, value),
+    );
+  }
+
+  private addAttributesFromOptions(
+    options: PriceRequestDto,
+    customAttributes: CustomAttribute[],
+  ): void {
+    if (!options) return;
+
+    const attributes = [
+      ["Quality", options.quality],
+      ["Infill", options.infill],
+    ];
+
+    attributes.forEach(([key, value]) =>
+      addAttribute(customAttributes, key, value),
+    );
+  }
+
+  private addAttributesFromCustomer(
+    customer: Partial<Customer>,
+    customAttributes: CustomAttribute[],
+  ): void {
+    if (!customer) return;
+
+    const customerAttributes: Array<[string, string | boolean | undefined]> = [
+      ["Filament Type", customer.filamentType],
+      ["Color", customer.color],
+      ["Amount", customer.amount?.toString()],
+      ["Delivery", customer.delivery],
+      ["Payment", customer.payment],
+      ["Invoice Required", customer.invoice],
+      ["Terms Accepted", customer.terms],
+    ];
+
+    customerAttributes.forEach(([key, value]) =>
+      addAttribute(customAttributes, key, value),
+    );
+
+    if (customer.lockerData) {
+      const lockerAttributes = [
+        ["Locker Name", customer.lockerData.name],
+        ["Locker Address Line 1", customer.lockerData.address.line1],
+        ["Locker Address Line 2", customer.lockerData.address.line2],
+        ["Locker City", customer.lockerData.address.city],
+        ["Locker Postal Code", customer.lockerData.address.countryCode],
+      ];
+
+      lockerAttributes.forEach(([key, value]) =>
+        addAttribute(customAttributes, key, value),
       );
     }
+  }
 
-    if (options) {
-      addAttribute("Quality", options.quality);
-      addAttribute("Infill", options.infill);
+  private createDraftOrderInput(
+    customer: Partial<Customer>,
+    priceBreakdown: PriceBreakdown,
+    customAttributes: CustomAttribute[],
+  ): DraftOrderInput {
+    if (!customer) {
+      throw new Error("Customer data is required.");
     }
 
-    if (customer) {
-      addAttribute("Filament Type", customer.filamentType);
-      addAttribute("Color", customer.color);
-      addAttribute("Amount", customer.amount);
-      addAttribute("Delivery", customer.delivery);
-      addAttribute("Payment", customer.payment);
-      addAttribute("Invoice Required", customer.invoice);
-      addAttribute("Terms Accepted", customer.terms);
-      if (customer.lockerData) {
-        addAttribute("Locker Name", customer.lockerData.name);
-        addAttribute(
-          "Locker Address Line 1",
-          customer.lockerData.address.line1,
-        );
-        addAttribute(
-          "Locker Address Line 2",
-          customer.lockerData.address.line2,
-        );
-        addAttribute("Locker City", customer.lockerData.address.city);
-        addAttribute(
-          "Locker Postal Code",
-          customer.lockerData.address.countryCode,
-        );
-      }
-    }
-
-    const draftOrderInput: any = {
+    const draftOrderInput: DraftOrderInput = {
       lineItems: [
         {
           title: `3D Print - ${customer.firstName} ${customer.lastName}: ${priceBreakdown.originalFilename}`,
@@ -130,19 +184,27 @@ export class ShopifyService {
           requiresShipping: true,
         },
       ],
-      shippingLine: {
-        shippingRateHandle: "inpost_paczkomat",
-        title: "InPost Paczkomat",
-        priceWithCurrency: {
-          amount: "16.99",
-          currencyCode: "PLN",
-        },
-      },
     };
 
-    if (customer) {
-      draftOrderInput.email = customer.email;
-      draftOrderInput.note = customer.notes;
+    draftOrderInput.email = customer.email;
+    draftOrderInput.note = customer.notes;
+    draftOrderInput.billingAddress = {
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      phone: customer.phone,
+      address1: customer.address1,
+      address2: customer.address2,
+      city: customer.city,
+      zip: customer.zip,
+      countryCode: customer.countryCode,
+      company: customer.company,
+    };
+
+    if (customer.delivery === "InPost Paczkomat" && customer.lockerData) {
+      draftOrderInput.shippingLine = {
+        title: `InPost Paczkomat ${customer.lockerData?.name}`,
+        price: customer.shippingCost?.toString() || "0",
+      };
       draftOrderInput.shippingAddress = {
         firstName: customer.firstName,
         lastName: customer.lastName,
@@ -154,42 +216,23 @@ export class ShopifyService {
         countryCode: customer.countryCode,
         company: customer.company,
       };
-      draftOrderInput.billingAddress = {
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        phone: customer.phone,
-        address1: customer.address1,
-        address2: customer.address2,
-        city: customer.city,
-        zip: customer.zip,
-        countryCode: customer.countryCode,
-        company: customer.company,
-      };
     }
 
+    return draftOrderInput;
+  }
+
+  private async executeDraftOrderCreation(
+    draftOrderInput: DraftOrderInput,
+  ): Promise<any> {
     try {
       this.logger.debug(
         `Sending GraphQL request to: "https://${this.configService.shopifyShopName}/admin/api/${this.configService.shopifyApiVersion}/graphql.json"`,
       );
-      const response = await this.client.request(
-        `mutation draftOrderCreate($input: DraftOrderInput!) {
-          draftOrderCreate(input: $input) {
-            draftOrder {
-              id
-              invoiceUrl
-            }
-            userErrors {
-              field
-              message
-            }
-          }
-        }`,
-        {
-          variables: {
-            input: draftOrderInput,
-          },
+      const response = await this.client.request(DRAFT_ORDER_CREATE_MUTATION, {
+        variables: {
+          input: draftOrderInput,
         },
-      );
+      });
 
       if (response.errors) {
         this.logger.error("GraphQL errors from Shopify API:", response.errors);
@@ -262,19 +305,11 @@ export class ShopifyService {
   async getDraftOrderStatus(draftOrderId: string): Promise<any> {
     this.logger.log(`Fetching status for draft order ${draftOrderId}`);
     try {
-      const response = await this.client.request(
-        `query draftOrder($id: ID!) {
-          draftOrder(id: $id) {
-            id
-            status
-          }
-        }`,
-        {
-          variables: {
-            id: draftOrderId,
-          },
+      const response = await this.client.request(DRAFT_ORDER_QUERY, {
+        variables: {
+          id: draftOrderId,
         },
-      );
+      });
 
       if (response.errors) {
         this.logger.error("GraphQL errors from Shopify API:", response.errors);

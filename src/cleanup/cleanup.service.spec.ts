@@ -1,18 +1,10 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { CleanupService } from "./cleanup.service";
 import { ConfigService } from "../config/config.service";
-import { CronExpression } from "@nestjs/schedule";
 import * as fs from "fs/promises";
 import { Logger } from "@nestjs/common";
 
 jest.mock("fs/promises");
-jest.mock("@nestjs/common", () => ({
-  ...jest.requireActual("@nestjs/common"),
-  Logger: jest.fn(() => ({
-    log: jest.fn(),
-    error: jest.fn(),
-  })),
-}));
 
 const mockFsReaddir = fs.readdir as jest.Mock;
 const mockFsStat = fs.stat as jest.Mock;

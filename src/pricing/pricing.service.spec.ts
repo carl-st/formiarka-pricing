@@ -3,14 +3,10 @@ import { PricingService } from "./pricing.service";
 import { ConfigService } from "../config/config.service";
 import { PriceRequestDto, Quality, Infill } from "./dto/price-request.dto";
 import * as child_process from "child_process";
-import * as fs from "fs/promises";
 
 jest.mock("child_process");
-jest.mock("fs/promises");
 
 const mockSpawn = child_process.spawn as jest.Mock;
-const mockFsReadFile = fs.readFile as jest.Mock;
-const mockFsUnlink = fs.unlink as jest.Mock;
 
 describe("PricingService", () => {
   let service: PricingService;
@@ -51,14 +47,15 @@ describe("PricingService", () => {
   });
 
   describe("priceFromStl", () => {
-    const stlPath = "/path/to/model.stl";
+    const tempFilename = "model.stl";
+    const stlPath = "model.stl";
     const options: PriceRequestDto = {
       originalFilename: "model.stl",
       quality: Quality.STANDARD,
       infill: Infill.STANDARD,
     };
     const gcode = `
-; filament used [g] = 10.5
+; total filament used [g] = 10.5
 ; estimated printing time (normal mode) = 1h 30m 15s
 `;
 
@@ -73,8 +70,11 @@ describe("PricingService", () => {
         stderr: { on: jest.fn() },
       };
       mockSpawn.mockReturnValue(spawnEmitter);
-      mockFsReadFile.mockResolvedValue(gcode);
-      mockFsUnlink.mockResolvedValue(undefined);
+
+      // Mock fs.promises functions
+      jest.spyOn(require("fs/promises"), "access").mockResolvedValue(undefined);
+      jest.spyOn(require("fs/promises"), "readFile").mockResolvedValue(gcode);
+      jest.spyOn(require("fs/promises"), "unlink").mockResolvedValue(undefined);
     });
 
     it("should calculate price correctly from STL", async () => {
@@ -92,14 +92,19 @@ describe("PricingService", () => {
           "--gcode",
           "--output",
           expect.stringMatching(/slice-\d+\.gcode$/),
-          stlPath,
+          "/tmp/test/model.stl",
         ]),
         { stdio: ["ignore", "pipe", "pipe"] },
       );
 
-      expect(mockFsReadFile).toHaveBeenCalledWith(expect.any(String), "utf8");
+      expect(require("fs/promises").readFile).toHaveBeenCalledWith(
+        expect.any(String),
+        "utf8",
+      );
 
       expect(result).toEqual({
+        tempFilename: tempFilename,
+        originalFilename: options.originalFilename,
         currency: "PLN",
         filamentCostPerKg: 50,
         energyCostPerKwh: 0.2,
@@ -117,10 +122,12 @@ describe("PricingService", () => {
         subtotal: 17.13,
         markupAmount: 3.43,
         totalBeforeMin: 20.56,
-        total: 20.56,
+        totalPrintCost: 20.56,
       });
 
-      expect(mockFsUnlink).toHaveBeenCalledWith(expect.any(String));
+      expect(require("fs/promises").unlink).toHaveBeenCalledWith(
+        expect.any(String),
+      );
     });
 
     it("should throw an error if PrusaSlicer fails", async () => {
@@ -147,7 +154,7 @@ describe("PricingService", () => {
     });
 
     it("should throw an error if G-code parsing fails", async () => {
-      mockFsReadFile.mockResolvedValue("; no stats here");
+      require("fs/promises").readFile.mockResolvedValue("; no stats here");
       await expect(service.priceFromStl(stlPath, options)).rejects.toThrow(
         "Failed to parse necessary stats from G-code",
       );
