@@ -7,7 +7,6 @@ import {
   PriceRequestDto,
   Quality,
 } from "../pricing/dto/price-request.dto";
-import { createAdminApiClient } from "@shopify/admin-api-client";
 
 jest.mock("@shopify/admin-api-client", () => ({
   createAdminApiClient: jest.fn(),
@@ -15,7 +14,6 @@ jest.mock("@shopify/admin-api-client", () => ({
 
 describe("ShopifyService", () => {
   let service: ShopifyService;
-  let configService: ConfigService;
 
   let mockClient: any;
 
@@ -50,7 +48,7 @@ describe("ShopifyService", () => {
     }).compile();
 
     service = module.get<ShopifyService>(ShopifyService);
-    configService = module.get<ConfigService>(ConfigService);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     (service as any).client = mockClient;
   });
 
@@ -61,6 +59,7 @@ describe("ShopifyService", () => {
   describe("createOrder", () => {
     it("should create a draft order with correct attributes", async () => {
       // Reset and configure the mockClient that's actually used by the service
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       mockClient.request.mockResolvedValue({
         data: {
           draftOrderCreate: {
@@ -83,6 +82,16 @@ describe("ShopifyService", () => {
         markupAmount: 20,
         markupPct: 20,
         totalPrintCost: 100,
+        currency: "PLN",
+        filamentCostPerKg: 100,
+        energyCostPerKwh: 0.1,
+        maintenanceRatePerHour: 10,
+        printerPowerW: 200,
+        hourlyRate: 10,
+        minJobFee: 5,
+        laborCost: 10,
+        subtotal: 90,
+        totalBeforeMin: 95,
       };
 
       const customer: Partial<Customer> = {
@@ -119,14 +128,17 @@ describe("ShopifyService", () => {
         originalFilename: "test.stl",
       };
 
-      const result = await service.createOrder(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const result: any = await service.createOrder(
         "https://example.com/test.stl",
         priceBreakdown,
         customer,
         options,
       );
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(mockClient.request).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(result.id).toBe("gid://shopify/DraftOrder/123456789");
     });
 
@@ -181,6 +193,7 @@ describe("ShopifyService", () => {
 
   describe("getDraftOrderStatus", () => {
     it("should return draft order status", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       mockClient.request.mockResolvedValueOnce({
         data: {
           draftOrder: {
@@ -190,14 +203,18 @@ describe("ShopifyService", () => {
         },
       });
 
-      const result = await service.getDraftOrderStatus(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const result: any = await service.getDraftOrderStatus(
         "gid://shopify/DraftOrder/123456789",
       );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(result.id).toBe("gid://shopify/DraftOrder/123456789");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(result.status).toBe("open");
     });
 
     it("should throw an error if draft order status fetch fails", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       mockClient.request.mockResolvedValueOnce({
         errors: [{ message: "Draft order not found" }],
       });

@@ -3,21 +3,13 @@ import { EventsGateway } from "./events.gateway";
 import { DraftOrderStatusDto } from "../shopify/dto/draft-order-status.dto";
 import { Server, Socket } from "socket.io";
 
-// Mock @nestjs/websockets decorators to avoid issues
-jest.mock("@nestjs/websockets", () => ({
-  SubscribeMessage: () => () => {}, // No-op decorator
-  WebSocketGateway: () => () => {}, // No-op decorator
-  OnGatewayConnection: () => () => {}, // No-op decorator
-  OnGatewayDisconnect: () => () => {}, // No-op decorator
-  WebSocketServer: () => () => {}, // No-op decorator
-}));
-
 describe("EventsGateway", () => {
   let gateway: EventsGateway;
   let mockServer: Partial<Server>;
   let mockSocket: Partial<Socket>;
 
   beforeEach(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     mockServer = {
       to: jest.fn().mockReturnThis(),
       emit: jest.fn(),
@@ -28,7 +20,7 @@ describe("EventsGateway", () => {
           },
         },
       },
-    };
+    } as any;
 
     mockSocket = {
       id: "test-client",
@@ -58,7 +50,8 @@ describe("EventsGateway", () => {
 
       gateway.handleSubscribeToOrder(client, draftOrderId);
 
-      expect(client.join).toHaveBeenCalledWith(draftOrderId);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(client.join as jest.Mock).toHaveBeenCalledWith(draftOrderId);
     });
   });
 
@@ -75,14 +68,18 @@ describe("EventsGateway", () => {
       const mockRoom = {
         size: 1,
       };
-      (mockServer.sockets.adapter.rooms.get as jest.Mock).mockReturnValue(
-        mockRoom,
-      );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      (mockServer as any).sockets.adapter.rooms.get.mockReturnValue(mockRoom);
 
       gateway.emitOrderStatusUpdate(draftOrderId, status);
 
-      expect(mockServer.to).toHaveBeenCalledWith(draftOrderId);
-      expect(mockServer.emit).toHaveBeenCalledWith("orderStatusUpdate", status);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect((mockServer as any).to).toHaveBeenCalledWith(draftOrderId);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect((mockServer as any).emit).toHaveBeenCalledWith(
+        "orderStatusUpdate",
+        status,
+      );
     });
 
     it("should log a warning if no clients are subscribed", () => {
@@ -94,14 +91,15 @@ describe("EventsGateway", () => {
       };
 
       // Mock the room to not exist or be empty
-      (mockServer.sockets.adapter.rooms.get as jest.Mock).mockReturnValue(
-        undefined,
-      );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      (mockServer as any).sockets.adapter.rooms.get.mockReturnValue(undefined);
 
       gateway.emitOrderStatusUpdate(draftOrderId, status);
 
-      expect(mockServer.to).not.toHaveBeenCalled();
-      expect(mockServer.emit).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect((mockServer as any).to).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect((mockServer as any).emit).not.toHaveBeenCalled();
     });
   });
 });

@@ -5,7 +5,6 @@ import { PriceRequestDto, Quality, Infill } from "./dto/price-request.dto";
 import * as child_process from "child_process";
 
 jest.mock("child_process");
-jest.unmock("fs/promises");
 
 const mockSpawn = child_process.spawn as jest.Mock;
 
@@ -73,9 +72,9 @@ describe("PricingService", () => {
       mockSpawn.mockReturnValue(spawnEmitter);
 
       // Mock fs.promises functions
-      jest.spyOn(require("fs/promises"), "access").mockResolvedValue();
+      jest.spyOn(require("fs/promises"), "access").mockResolvedValue(undefined);
       jest.spyOn(require("fs/promises"), "readFile").mockResolvedValue(gcode);
-      jest.spyOn(require("fs/promises"), "unlink").mockResolvedValue();
+      jest.spyOn(require("fs/promises"), "unlink").mockResolvedValue(undefined);
     });
 
     it("should calculate price correctly from STL", async () => {
